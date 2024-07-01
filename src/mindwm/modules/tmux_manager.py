@@ -1,6 +1,6 @@
-from libtmux import Server
 from time import sleep
 
+# TODO: reimplement this module with tmux control mode instead of using libtmux
 class Tmux_manager:
     envs = {}
 
@@ -53,47 +53,51 @@ class Tmux_manager:
         # keys will be sent into current pane instead of target pane
         # but this is true only when external variable used in string template
         # i.e. `pane.send_keys("echo hello")` works as expected
-        old_window = self.session.active_window
-        old_pane = old_window.active_pane
-        pane.window.select()
-        pane.select()
-        pane.send_keys(r"printf '\033]2;%s\033\\' '" + title + "'")
-        old_window.select()
-        old_pane.select()
+#        old_window = self.session.active_window
+#        old_pane = old_window.active_pane
+#        pane.window.select()
+#        pane.select()
+#        pane.send_keys(r"printf '\033]2;%s\033\\' '" + title + "'")
+#        old_window.select()
+#        old_pane.select()
+        pass
 
 
     async def mk_layout(self):
-        self.ui_window = self.session.new_window(environment=self.envs['term'])
-        self.ui_window.rename_window("Terminal")
-        self.service_window = self.session.new_window(environment=self.envs['services'])
-        self.service_window.rename_window("Service")
-
-        self.terminal_pane = self.ui_window.panes[0]
-        # FIXME: panes do not inherit window environment variables
-        self.feedback_pane = self.terminal_pane.split_window(environment=self.envs['feedback'])
-        await self.set_pane_title(self.terminal_pane, "Term")
-        await self.set_pane_title(self.feedback_pane, "Feedback")
-
-        self.vector_pane = self.service_window.panes[0]
-        self.nats_pane = self.vector_pane.split_window()
-        await self.set_pane_title(self.vector_pane, "Vector")
-        await self.set_pane_title(self.nats_pane, "NATS")
-
-        self.terminal_pane.clear()
-        self.feedback_pane.clear()
-        self.vector_pane.clear()
-        self.nats_pane.clear()
+#        self.ui_window = self.session.new_window(environment=self.envs['term'])
+#        self.ui_window.rename_window("Terminal")
+#        self.service_window = self.session.new_window(environment=self.envs['services'])
+#        self.service_window.rename_window("Service")
+#
+#        self.terminal_pane = self.ui_window.panes[0]
+#        # FIXME: panes do not inherit window environment variables
+#        self.feedback_pane = self.terminal_pane.split_window(environment=self.envs['feedback'])
+#        await self.set_pane_title(self.terminal_pane, "Term")
+#        await self.set_pane_title(self.feedback_pane, "Feedback")
+#
+#        self.vector_pane = self.service_window.panes[0]
+#        self.nats_pane = self.vector_pane.split_window()
+#        await self.set_pane_title(self.vector_pane, "Vector")
+#        await self.set_pane_title(self.nats_pane, "NATS")
+#
+#        self.terminal_pane.clear()
+#        self.feedback_pane.clear()
+#        self.vector_pane.clear()
+#        self.nats_pane.clear()
+        pass
 
 
     async def reset(self):
-        windows = self.session.windows
-        windows[0].rename_window("Manager")
-        panes = windows[0].panes
-        for p in panes[1:]:
-            p.kill()
-
-        for w in windows[1:]:
-            w.kill()
+#        windows = self.session.windows
+#        windows[0].rename_window("Manager")
+#        panes = windows[0].panes
+#        for p in panes[1:]:
+#            p.kill()
+#
+#        for w in windows[1:]:
+#            w.kill()
+#
+        pass
 
 
     async def session_by_name(self, name):

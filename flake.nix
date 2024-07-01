@@ -12,9 +12,7 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       perSystem = { config, self', inputs', pkgs, system, ... }:
       let
-        project = pkgs.callPackage ./package.nix {
-          buildPythonPackage = nixpkgs.legacyPackages.${system}.python3.pkgs.buildPythonPackage;
-        };
+        project = pkgs.callPackage ./package.nix { };
         my_python = pkgs.python3.withPackages (ps: [
           project
         ]);

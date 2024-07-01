@@ -7,11 +7,11 @@ from uuid import uuid4
 from pprint import pprint
 from decouple import config
 
-from modules.nats_listener import NatsListener
-from modules.tmux_manager import Tmux_manager
-from modules.pipe_listener import PipeListener
-from modules.text_processor import TextProcessor
-from modules.dbus_interface import DbusInterface
+from mindwm.modules.nats_listener import NatsListener
+from mindwm.modules.tmux_manager import Tmux_manager
+from mindwm.modules.pipe_listener import PipeListener
+from mindwm.modules.text_processor import TextProcessor
+from mindwm.modules.dbus_interface import DbusInterface
 
 
 async def main():
@@ -114,5 +114,8 @@ async def main():
         print("tick")
         await asyncio.sleep(1)
 
-if __name__ == "__main__":
+def app():
     asyncio.run(main())
+
+if __name__ == "__main__":
+    app()

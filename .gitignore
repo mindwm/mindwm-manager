@@ -1,0 +1,5 @@
+result
+result-nix
+__pycache__/
+*.py[cod]
+*$py.class
