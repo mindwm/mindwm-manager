@@ -4,6 +4,8 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/24.05";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    surrealdb-py.url = "github:omgbebebe/surrealdb.py-nix";
+    surrealdb-py.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs@{ flake-parts, nixpkgs, ... }:
@@ -12,7 +14,9 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       perSystem = { config, self', inputs', pkgs, system, ... }:
       let
-        project = pkgs.callPackage ./package.nix { };
+        project = pkgs.callPackage ./package.nix {
+          surrealdb-py = inputs.surrealdb-py.packages.${system}.default;
+        };
       in { 
         packages.default = project;
         devShells.default = pkgs.mkShell {

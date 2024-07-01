@@ -1,5 +1,6 @@
 { lib
 , pkgs
+, surrealdb-py
 }:
 with pkgs;
 
@@ -9,14 +10,16 @@ python3.pkgs.buildPythonApplication {
 
   src = ./.;
 
-  propagatedBuildInputs = with python3.pkgs; [
+  propagatedBuildInputs = [
+    surrealdb-py
+  ] ++ (with python3.pkgs; [
     nats-py
     python-decouple
     aiofiles
     dbus-next
     pyte
     textfsm tabulate
-  ];
+  ]);
 
   format = "pyproject";
   nativeBuildInputs = with python3.pkgs; [ setuptools ];
