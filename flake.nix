@@ -13,13 +13,13 @@
       perSystem = { config, self', inputs', pkgs, system, ... }:
       let
         project = pkgs.callPackage ./package.nix { };
-        my_python = pkgs.python3.withPackages (ps: [
-          project
-        ]);
       in { 
         packages.default = project;
         devShells.default = pkgs.mkShell {
-          packages = [ my_python ];
+          packages = [ project ];
+          buildInputs = with pkgs; [
+            natscli
+          ];
         };
       };
       flake = {
