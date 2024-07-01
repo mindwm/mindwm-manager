@@ -1,0 +1,22 @@
+[project]
+name = "mindwm-manager"
+version = "0.9.1"
+authors = [
+  { name="Omg Bebebe", email="omgbebebe@gmail.com" },
+]
+description = "MindWM Manager service"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Linux",
+]
+
+[project.urls]
+Homepage = "https://github.com/mindwm/mindwm-manager"
+Issues = "https://github.com/mindwm/mindwm-manager/issues"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
