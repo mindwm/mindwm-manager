@@ -11,6 +11,7 @@ from mindwm.modules.tmux_manager import Tmux_manager
 from mindwm.modules.pipe_listener import PipeListener
 from mindwm.modules.text_processor import TextProcessor
 from mindwm.modules.dbus_interface import DbusInterface
+from mindwm.modules.surrealdb_interface import SurrealDbInterface
 
 
 class Manager:
@@ -66,6 +67,12 @@ class Manager:
         await self.pipe_listener.init()
         self._loop.create_task(self.pipe_listener.loop())
 
+        #SurrealDb interface
+        self.graphdb = SurrealDbInterface("ws://localhost:8000/database/namespace")
+        await self.graphdb.init()
+        self._loop.create_task(self.graphdb.loop())
+
+
     async def run(self):
         while True:
             await asyncio.sleep(1)
@@ -92,13 +99,65 @@ class Manager:
         await self.nats_publish("iodocument", "iodocument", result)
 
     async def graph_event_callback(self, msg):
-        print(f"graph event received: {msg}")
+        data = msg['data']
+        #print(f"graph event received: {payload}")
+#        if 'meta' in data.keys():
+#            print("Meta:")
+#            pprint(data['meta'])
+#        else:
+#            print(f"no Meta in: {data}")
+
+        if 'payload' in data.keys():
+            m = data['meta']
+            p = data['payload']
+            op = m['operation']
+            ty = p['type']
+            if ty == "relationship":
+                label = p['label']
+                edge = {
+                    "type": p['label'],
+                    "A": {
+                        "id": p['start']['id'],
+                        "type": p['start']['labels'][0],
+                    },
+                    "B": {
+                        "id": p['end']['id'],
+                        "type": p['end']['labels'][0]
+                    },
+                }
+                print(f"edge {op}: {edge}")
+                await self.graphdb.update_edge(label, edge['A'], edge['B'])
+
+            elif ty == "node":
+                node = {
+                    "id": p['id'],
+                    "type": p['after']['labels'][0],
+                }
+                if node['type'] == "IoDocument":
+                    node['props'] = {
+                        "prompt": p['after']['properties']['ps1'],
+                        "input": p['after']['properties']['user_input'],
+                        "output": p['after']['properties']['output'],
+                    }
+                print(f"node {op}: {node}")
+                await self.graphdb.update_node(node)
+
+            else:
+                print(f"unknown payload type: {ty} ({op})")
+
+#            pprint(data['payload'])
+
+        else:
+            #print(f"no Payload in: {data}")
+            pass
     
     async def feedback_callback(self, msg):
-        print(f"feedback received: {msg}")
+        #print(f"feedback received: {msg}")
+        pass
     
     async def iodoc_callback(self, msg):
-        print(f"iodoc received: {msg}")
+        #print(f"iodoc received: {msg}")
+        pass
 
 
 async def app():

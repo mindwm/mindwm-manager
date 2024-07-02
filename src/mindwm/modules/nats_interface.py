@@ -45,11 +45,7 @@ class NatsInterface:
 
         await self.nc.publish(subj, payload)
 
-    async def message_handler2(self, msg):
-        print(f"new message received: {msg}")
-
     async def message_handler(self, subj, callback, msg):
-        print(f"new message received: {msg}")
         data = json.loads(msg.data.decode())
         if 'message' in data.keys():
             message = data['message']
