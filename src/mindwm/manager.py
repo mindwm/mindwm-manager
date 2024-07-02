@@ -2,20 +2,20 @@
 import asyncio
 from functools import partial
 import json
-import nats
 from uuid import uuid4
 from pprint import pprint
 from decouple import config
 
-from mindwm.modules.nats_listener import NatsListener
+from mindwm.modules.nats_interface import NatsInterface
 from mindwm.modules.tmux_manager import Tmux_manager
 from mindwm.modules.pipe_listener import PipeListener
 from mindwm.modules.text_processor import TextProcessor
 from mindwm.modules.dbus_interface import DbusInterface
 
 
-async def main():
-    env = {
+class Manager:
+    def __init__(self):
+        env = {
             "MINDWM_BACK_NATS_HOST": config("MINDWM_BACK_NATS_HOST", default="127.0.0.1"),
             "MINDWM_BACK_NATS_PORT": config("MINDWM_BACK_NATS_PORT", default=4222, cast=int),
             "MINDWM_BACK_NATS_USER": config("MINDWM_BACK_NATS_USER", default="root"),
@@ -23,34 +23,55 @@ async def main():
             "MINDWM_BACK_NATS_SUBJECT_PREFIX": config("MINDWM_BACK_NATS_SUBJECT_PREFIX"),
 
             "MINDWM_ASCIINEMA_REC_PIPE": config("MINDWM_ASCIINEMA_REC_PIPE"),
-            }
-#
-#    # TODO: need to validate MINDWM_TMUX value and describe what's wrong
-#    tmux_socket = env['MINDWM_TMUX'].split(',')[0]
-    nats_url = f"nats://{env['MINDWM_BACK_NATS_USER']}:{env['MINDWM_BACK_NATS_PASS']}@{env['MINDWM_BACK_NATS_HOST']}:{env['MINDWM_BACK_NATS_PORT']}"
-    nc = await nats.connect(nats_url)
+        }
+        self.params = {
+            "asciinema" : {
+                "rec_pipe": f"{env['MINDWM_ASCIINEMA_REC_PIPE']}",
+            },
+            "nats": {
+                "url": f"nats://{env['MINDWM_BACK_NATS_USER']}:{env['MINDWM_BACK_NATS_PASS']}@{env['MINDWM_BACK_NATS_HOST']}:{env['MINDWM_BACK_NATS_PORT']}",
+                "subject_prefix": f"{env['MINDWM_BACK_NATS_SUBJECT_PREFIX']}",
+                "listen": {
+                    "feedback": {
+                        "subject": f"{env['MINDWM_BACK_NATS_SUBJECT_PREFIX']}.feedback",
+                        "callback": self.feedback_callback,
+                    },
+                    "graph_events": {
+                        "subject": "user-root.mindwm-client-broker-kne-trigger._knative",
+                        "callback": self.graph_event_callback,
+                    },
+                    "iodoc_topic": {
+                        "subject": "mindwm.root.mindwm-client.tmux.L3RtcC90bXV4LTAvZGVmYXVsdCwyMCww.25a67850-028d-4424-abc6-552fb8ea7775.0.0.test",
+                        "callback": self.iodoc_callback,
+                    },
+                },
+            },
+        }
 
-    loop = asyncio.get_event_loop()
+    async def init(self):
+        # Nats interface
+        self._loop = asyncio.get_event_loop()
+        self.nats = NatsInterface(self.params['nats']['url'])
+        await self.nats.init()
+        self._loop.create_task(self.nats.loop())
+        for k, v in self.params['nats']['listen'].items():
+            await self.nats.subscribe(v['subject'], v['callback'])
 
-    text_processor = TextProcessor()
-    #ai_processor = AiProcessor(env)
-    await text_processor.init()
-    #await ai_processor.init()
+        # DBus interface
+        self.dbus = DbusInterface()
+        self._loop.create_task(self.dbus.init())
 
-    dbus_interface = DbusInterface()
-    loop.create_task(dbus_interface.init())
+        # Pipe listener
+        self.pipe_listener = PipeListener(self.params['asciinema']['rec_pipe'], cb=self.input_callback)
+        await self.pipe_listener.init()
+        self._loop.create_task(self.pipe_listener.loop())
 
-    async def nats_message_callback(msg):
-        print(f"Nats feedback received: {msg}")
-        await dbus_interface.feedback_message(json.dumps(msg))
+    async def run(self):
+        while True:
+            await asyncio.sleep(1)
 
-    nats_feedback_topic = "{}.feedback".format(env['MINDWM_BACK_NATS_SUBJECT_PREFIX'])
-    nats_listener = NatsListener(nats_url, nats_feedback_topic, message_callback=nats_message_callback)
-    loop.create_task(nats_listener.init())
-
-
-    async def nats_pub(topic, t, msg):
-        subject = f"{env['MINDWM_BACK_NATS_SUBJECT_PREFIX']}.{topic}"
+    async def nats_publish(self, topic, t, msg):
+        subject = f"{self.params['nats']['subject_prefix']}.{topic}"
         payload = {
             "knativebrokerttl": "255",
             "specversion": "1.0",
@@ -63,59 +84,27 @@ async def main():
             },
             "id": str(uuid4()),
         }
-        await nc.publish(subject, bytes(json.dumps(payload), encoding='utf-8'))
+        await self.nats.publish(subject, bytes(json.dumps(payload), encoding='utf-8'))
 
-    nats_pub_word = partial(nats_pub, "words", "word")
-    nats_pub_line = partial(nats_pub, "lines", "line")
-    nats_pub_summary = partial(nats_pub, "summary", "summary")
-    nats_pub_iodoc = partial(nats_pub, "iodocument", "iodocument")
-    nats_pub_ai_answer = partial(nats_pub, "ai_answer", "ai_answer")
-
-    async def cb_print(payload):
-        data = json.loads(payload)
-        inp = data['input']
-        full_cmd = inp
-        #summary = None
-
-        if len(inp) > 3 and not inp.startswith('#'):
-            # try to expand short commands to it full form
-            # TODO: disabled temporary
-            full_cmd = inp #await ai_processor.cmd_short_to_full(data['input'].strip())
-
-        # send message to ai
-        if inp.startswith('#mw'):
-            answer = await ai_processor.query(data['input'][3:])
-            print(f"answer: {answer}")
-            await nats_pub_ai_answer(answer)
-
+    async def input_callback(self, payload):
         result = json.loads(payload)
-        try:
-            res_ = await text_processor.parse(cmd=full_cmd, output=data['output'])
-            result['textfsm'] = json.loads(res_)
-        except NotImplementedError:
-            pass
+        print(f"iodocument: {payload}")
+        await self.nats_publish("iodocument", "iodocument", result)
 
-        result['full_cmd'] = full_cmd
-        #result['summary'] = summary
-        #pprint(res, width=200)
-        #print(f"full_cmd: {full_cmd}")
-        #print(f"type: {type(res)}")
-        await nats_pub_iodoc(result)
-        print(f"result: {result}")
+    async def graph_event_callback(self, msg):
+        print(f"graph event received: {msg}")
+    
+    async def feedback_callback(self, msg):
+        print(f"feedback received: {msg}")
+    
+    async def iodoc_callback(self, msg):
+        print(f"iodoc received: {msg}")
 
-    print(f"pipe_path: {env['MINDWM_ASCIINEMA_REC_PIPE']}")
-    #pipe_listener = PipeListener(env['MINDWM_ASCIINEMA_REC_PIPE'], cb=cb_print, cb_word=nats_pub_word, cb_line=nats_pub_line)
-    pipe_listener = PipeListener(env['MINDWM_ASCIINEMA_REC_PIPE'], cb=cb_print, cb_line=nats_pub_line)
 
-    await pipe_listener.init()
-    await pipe_listener.loop()
-
-    while True:
-        print("tick")
-        await asyncio.sleep(1)
-
-def app():
-    asyncio.run(main())
+async def app():
+    mgr = Manager()
+    await mgr.init()
+    await mgr.run()
 
 if __name__ == "__main__":
-    app()
+    asyncio.run(app())

@@ -19,7 +19,10 @@ class PipeListener:
         self.screen = pyte.Screen(self.cols, self.rows)
         self.stream = pyte.ByteStream(self.screen)
         if not os.path.exists(self.pipe_path):
+            print(f"creating new PIPE: {self.pipe_path}")
             os.mkfifo(self.pipe_path)
+
+        print(f"listening for Asciinema on {self.pipe_path}")
 
     def sanitize(self, chunk_raw):
         self.screen.reset()
