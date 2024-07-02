@@ -106,5 +106,8 @@ async def app():
     await mgr.init()
     await mgr.run()
 
-if __name__ == "__main__":
+def main():
     asyncio.run(app())
+
+if __name__ == "__main__":
+    main()
