@@ -14,16 +14,29 @@
       systems = [ "x86_64-linux" "aarch64-linux" ];
       perSystem = { config, self', inputs', pkgs, system, ... }:
       let
+        my_python = pkgs.python3.withPackages (ps: with ps; [
+          inputs.surrealdb-py.packages.${system}.default
+          nats-py
+          python-decouple
+          aiofiles
+          dbus-next
+          pyte
+          textfsm tabulate
+        ]);
         project = pkgs.callPackage ./package.nix {
-          surrealdb-py = inputs.surrealdb-py.packages.${system}.default;
+          python = my_python;
         };
       in { 
         packages.default = project;
         devShells.default = pkgs.mkShell {
-          packages = [ project ];
+#          packages = [ project ];
           buildInputs = with pkgs; [
+            my_python
             natscli
           ];
+          shellHook = ''
+            export PYTHONPATH="$PYTHONPATH:./src"
+          '';
         };
       };
       flake = {
