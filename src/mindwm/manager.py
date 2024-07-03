@@ -38,7 +38,7 @@ class Manager:
                         "callback": self.feedback_callback,
                     },
                     "graph_events": {
-                        "subject": "user-root.mindwm-client-broker-kne-trigger._knative",
+                        "subject": "user-pion.snpnb-broker-kne-trigger._knative",
                         "callback": self.graph_event_callback,
                     },
                     "iodoc_topic": {
@@ -66,6 +66,7 @@ class Manager:
         self.pipe_listener = PipeListener(self.params['asciinema']['rec_pipe'], cb=self.input_callback)
         await self.pipe_listener.init()
         self._loop.create_task(self.pipe_listener.loop())
+        print(f"Will send to: {self.params['nats']['subject_prefix']}.iodocument")
 
         #SurrealDb interface
         self.graphdb = SurrealDbInterface("ws://localhost:8000/database/namespace")
@@ -139,8 +140,9 @@ class Manager:
                         "input": p['after']['properties']['user_input'],
                         "output": p['after']['properties']['output'],
                     }
-                print(f"node {op}: {node}")
                 await self.graphdb.update_node(node)
+
+                print(f"node {op}: {node}")
 
             else:
                 print(f"unknown payload type: {ty} ({op})")

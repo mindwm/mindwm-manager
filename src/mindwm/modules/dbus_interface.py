@@ -8,11 +8,12 @@ from uuid import uuid4
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/..'))
 
 from dbus_next.service import ServiceInterface, method, signal, dbus_property
-from dbus_next.aio.message_bus import MessageBus
+from dbus_next.aio.message_bus import Message, MessageType, MessageBus
 from dbus_next.constants import BusType
 from dbus_next import Variant
 
 import asyncio
+from pprint import pprint
 
 # credits to https://blog.dalibo.com/2022/09/12/monitoring-python-subprocesses.html
 class MyProtocol(asyncio.subprocess.SubprocessStreamProtocol):
@@ -81,20 +82,20 @@ class Subprocess():
         proc = asyncio.subprocess.Process(transport, protocol, self._loop)
         self._proc = proc
         (out, err), _ = await asyncio.gather(proc.communicate(), self.callback_on_output())
-        self._terminate_callback(self._uid)
+        await self._terminate_callback(self._uid)
 
     async def callback_on_output(self):
         async for line in self._reader:
             if self._output_regex:
                 out_string = line.decode('utf-8')
                 if self._output_regex.match(out_string):
-                    self._callback(self._uid, line, 'stdout')
+                    await self._callback(self._uid, line, 'stdout')
             else:
-                self._callback(self._uid, line, 'stdout')
+                await self._callback(self._uid, line, 'stdout')
 
     async def terminate(self):
         if self._proc:
-            self._proc.terminate()
+            await self._proc.terminate()
 
     async def send_stdio(self, string):
         if self._proc:
@@ -104,19 +105,21 @@ class Subprocess():
 
 
 class SpawnedCommand():
-    def __init__(self, cmd, output_regex, uid, subprocess):
-       self._cmd = cmd
-       self._output_regex = output_regex
-       self._uid = uid
-       self._subp = subprocess
+    def __init__(self, cmd, output_regex, uid, subprocess, dest):
+        self._cmd = cmd
+        self._output_regex = output_regex
+        self._uid = uid
+        self._subp = subprocess
+        self.dest = dict(list(map(lambda x: x.split('='), dest.split(','))))
 
 
 class ManagerInterface(ServiceInterface):
-    def __init__(self, name):
+    def __init__(self, name, bus):
         super().__init__(name)
         self._string_prop = 'kevin'
         self._spawned_commands = []
         self._loop = asyncio.get_event_loop()
+        self._bus = bus
 
     def findByUid(self, uid):
         for p in self._spawned_commands:
@@ -125,28 +128,43 @@ class ManagerInterface(ServiceInterface):
 
         return None
 
-    def subp_terminate_callback(self, uid):
+    async def subp_terminate_callback(self, uid):
         p = self.findByUid(uid)
         if p:
+            await self.callback_output(uid, b"", "", True)
             self._spawned_commands.remove(p)
 
-    @signal()
-    def callback_signal(self, uid, output, label) -> 'ss':
-        print(f"callback signal: ({uid}) {label}: {output}")
-        return [uid, output.decode("utf-8")]
+
+    async def callback_output(self, uid, output, label, terminated = False):
+        p = self.findByUid(uid)
+        if not p:
+            raise Exception(f"process not found {uid}")
+
+        reply = [uid, output.decode("utf-8").strip(), terminated]
+        msg = Message(
+            destination=p.dest['destination'],
+            path=p.dest['path'],
+            interface=p.dest['interface'],
+            member=p.dest['member'],
+            signature='ssb',
+            body=reply,
+            serial=self._bus.next_serial()
+        )
+        reply = await self._bus.call(msg)
+        assert reply.message_type == MessageType.METHOD_RETURN
 
     @method()
-    async def Run(self, cmd: 's', output_regex: 's') -> 's':
+    async def Run(self, cmd: 's', output_regex: 's', output_to: 's') -> 's':
         uid = str(uuid4())
         subp = Subprocess(
                 cmd,
                 output_regex,
-                self.callback_signal,
+                self.callback_output,
                 uid,
                 self.subp_terminate_callback)
         self._spawned_commands.append(
                 SpawnedCommand(
-                    cmd, output_regex, uid, subp))
+                    cmd, output_regex, uid, subp, output_to))
         #await self._subp.start()
         self._loop.create_task(subp.start())
         print(f"echo: ({uid}) {cmd}")
@@ -224,7 +242,7 @@ class DbusInterface():
         self.interface_name = 'org.mindwm.client.manager'
     
         bus = await MessageBus(bus_type = BusType.SESSION).connect()
-        self.interface = ManagerInterface(self.interface_name)
+        self.interface = ManagerInterface(self.interface_name, bus)
         bus.export(self.path, self.interface)
         await bus.request_name(self.name)
         print(f'service up on name: "{self.name}", path: "{self.path}", interface: "{self.interface_name}"')
