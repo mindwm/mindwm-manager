@@ -10,7 +10,7 @@ python3.pkgs.buildPythonApplication {
 
   src = ./.;
 
-  propagatedBuildInputs = [ python ];
+  propagatedBuildInputs = [ python dbus ];
 
   format = "pyproject";
   nativeBuildInputs = with python3.pkgs; [ setuptools ];

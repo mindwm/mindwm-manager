@@ -10,8 +10,6 @@ class NatsInterface:
         self.nc = None
         self.url = url
         self.subs = {}
-        #self._loop = asyncio.get_event_loop()
-        #self._loop = asyncio.new_event_loop()
 
     async def init(self):
         print(f"Initializing NATSListener for {self.url}")

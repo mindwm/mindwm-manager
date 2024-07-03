@@ -5,7 +5,8 @@ import json
 from uuid import uuid4
 from pprint import pprint
 from decouple import config
-
+from base64 import b64encode
+from uuid import uuid4
 from mindwm.modules.nats_interface import NatsInterface
 from mindwm.modules.tmux_manager import Tmux_manager
 from mindwm.modules.pipe_listener import PipeListener
@@ -17,36 +18,26 @@ from mindwm.modules.surrealdb_interface import SurrealDbInterface
 class Manager:
     def __init__(self):
         env = {
-            "MINDWM_BACK_NATS_HOST": config("MINDWM_BACK_NATS_HOST", default="127.0.0.1"),
-            "MINDWM_BACK_NATS_PORT": config("MINDWM_BACK_NATS_PORT", default=4222, cast=int),
-            "MINDWM_BACK_NATS_USER": config("MINDWM_BACK_NATS_USER", default="root"),
-            "MINDWM_BACK_NATS_PASS": config("MINDWM_BACK_NATS_PASS", default="r00tpass"),
-            "MINDWM_BACK_NATS_SUBJECT_PREFIX": config("MINDWM_BACK_NATS_SUBJECT_PREFIX"),
-
-            "MINDWM_ASCIINEMA_REC_PIPE": config("MINDWM_ASCIINEMA_REC_PIPE"),
+                "MINDWM_NATS_URL": config("MINDWM_NATS_URL", default="nats://user:pass@127.0.0.1/"),
+            #"MINDWM_ASCIINEMA_REC_PIPE": config("MINDWM_ASCIINEMA_REC_PIPE"),
         }
         self.params = {
-            "asciinema" : {
-                "rec_pipe": f"{env['MINDWM_ASCIINEMA_REC_PIPE']}",
-            },
             "nats": {
-                "url": f"nats://{env['MINDWM_BACK_NATS_USER']}:{env['MINDWM_BACK_NATS_PASS']}@{env['MINDWM_BACK_NATS_HOST']}:{env['MINDWM_BACK_NATS_PORT']}",
-                "subject_prefix": f"{env['MINDWM_BACK_NATS_SUBJECT_PREFIX']}",
-                "listen": {
-                    "feedback": {
-                        "subject": f"{env['MINDWM_BACK_NATS_SUBJECT_PREFIX']}.feedback",
-                        "callback": self.feedback_callback,
-                    },
-                    "graph_events": {
-                        "subject": "user-pion.snpnb-broker-kne-trigger._knative",
-                        "callback": self.graph_event_callback,
-                    },
-                    "iodoc_topic": {
-                        "subject": "mindwm.root.mindwm-client.tmux.L3RtcC90bXV4LTAvZGVmYXVsdCwyMCww.25a67850-028d-4424-abc6-552fb8ea7775.0.0.test",
-                        "callback": self.iodoc_callback,
-                    },
-                },
+                "url": config("MINDWM_NATS_URL", default="nats://user:pass@127.0.0.1/"),
+                "subject_prefix": config("MINDWM_NATS_SUBJECT_PREFIX", default=f"mindwm.demouser.demohost"),
+                "feeback_subject_suffix": config("MINDWM_NATS_FEEDBACK_SUBJECT_SUFFIX", default="feedback"),
+                "graph_events_subject": config("MINDWM_NATS_GRAPH_EVENTS_SUBJECT", default=f"user-demouser.demohost-broker-kne-trigger._knative"),
+                "listen": {},
             },
+            "surrealdb": {
+                "url": config("MINDWM_SURREALDB_URL", default="ws://localhost:8000/mindwm/context_graph"),
+            },
+        }
+        self.params['nats']['listen'] = {
+            "graph_events": {
+                "subject": self.params['nats']['graph_events_subject'],
+                "callback": self.graph_event_callback,
+            }
         }
 
     async def init(self):
@@ -55,6 +46,7 @@ class Manager:
         self.nats = NatsInterface(self.params['nats']['url'])
         await self.nats.init()
         self._loop.create_task(self.nats.loop())
+
         for k, v in self.params['nats']['listen'].items():
             await self.nats.subscribe(v['subject'], v['callback'])
 
@@ -63,13 +55,13 @@ class Manager:
         self._loop.create_task(self.dbus.init())
 
         # Pipe listener
-        self.pipe_listener = PipeListener(self.params['asciinema']['rec_pipe'], cb=self.input_callback)
-        await self.pipe_listener.init()
-        self._loop.create_task(self.pipe_listener.loop())
-        print(f"Will send to: {self.params['nats']['subject_prefix']}.iodocument")
+        #self.pipe_listener = PipeListener(self.params['asciinema']['rec_pipe'], cb=self.input_callback)
+        #await self.pipe_listener.init()
+        #self._loop.create_task(self.pipe_listener.loop())
+        #print(f"Will send to: {self.params['nats']['subject_prefix']}.iodocument")
 
         #SurrealDb interface
-        self.graphdb = SurrealDbInterface("ws://localhost:8000/database/namespace")
+        self.graphdb = SurrealDbInterface(self.params['surrealdb']['url'])
         await self.graphdb.init()
         self._loop.create_task(self.graphdb.loop())
 
@@ -113,6 +105,7 @@ class Manager:
             p = data['payload']
             op = m['operation']
             ty = p['type']
+            print(f"{op} {ty} ({p['id']})")
             if ty == "relationship":
                 label = p['label']
                 edge = {
@@ -130,6 +123,7 @@ class Manager:
                 await self.graphdb.update_edge(label, edge['A'], edge['B'])
 
             elif ty == "node":
+                #print(f"New node to create: {p}")
                 node = {
                     "id": p['id'],
                     "type": p['after']['labels'][0],
@@ -142,7 +136,7 @@ class Manager:
                     }
                 await self.graphdb.update_node(node)
 
-                print(f"node {op}: {node}")
+                #print(f"node {op}: {node}")
 
             else:
                 print(f"unknown payload type: {ty} ({op})")

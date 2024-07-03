@@ -16,15 +16,17 @@ class SurrealDbInterface:
             await asyncio.sleep(1)
 
     async def update_node(self, node):
-        print(f"Creating node {node}")
-        await self._db.create(
-            f"{node['type']}:{node['id']}",
-            {
+        #print(f"Creating node {node}")
+        if 'props' in node.keys() and node['props'] != None:
+            params =  {
                 "prompt": node['props']['prompt'],
                 "input": node['props']['input'],
                 "output": node['props']['output']
             }
-        )
+        else:
+            params = {"nodata": True}
+
+        await self._db.create(f"{node['type']}:{node['id']}", params)
 
     async def update_edge(self, edge_type, node_a, node_b):
         await self._db.query(f"""

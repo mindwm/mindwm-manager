@@ -26,8 +26,15 @@
         project = pkgs.callPackage ./package.nix {
           python = my_python;
         };
+        dockerImage = pkgs.dockerTools.buildImage {
+          name = "mindwm-manager";
+          config = {
+            cmd = [ "${project}/bin/mindwm-manager" ];
+          };
+        };
       in { 
         packages.default = project;
+        packages.docker = dockerImage;
         devShells.default = pkgs.mkShell {
 #          packages = [ project ];
           buildInputs = with pkgs; [
