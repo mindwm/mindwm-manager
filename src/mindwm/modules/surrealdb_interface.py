@@ -6,7 +6,7 @@ class SurrealDbInterface:
         self._url = url
         self._db = AsyncSurrealDB(self._url)
 
-    async def init(self):
+    async def _init(self):
         await self._db.connect()
         print(f"Connected to SurrealDB on {self._url}")
 
@@ -16,17 +16,7 @@ class SurrealDbInterface:
             await asyncio.sleep(1)
 
     async def update_node(self, node):
-        #print(f"Creating node {node}")
-        if 'props' in node.keys() and node['props'] != None:
-            params =  {
-                "prompt": node['props']['prompt'],
-                "input": node['props']['input'],
-                "output": node['props']['output']
-            }
-        else:
-            params = {"nodata": True}
-
-        await self._db.create(f"{node['type']}:{node['id']}", params)
+        await self._db.create(f"{node['type']}:{node['id']}", node['payload'])
 
     async def update_edge(self, edge_type, node_a, node_b):
         await self._db.query(f"""

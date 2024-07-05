@@ -8,19 +8,19 @@ from decouple import config
 from base64 import b64encode
 from uuid import uuid4
 from mindwm.modules.nats_interface import NatsInterface
-from mindwm.modules.tmux_manager import Tmux_manager
+#from mindwm.modules.tmux_manager import Tmux_manager
 from mindwm.modules.pipe_listener import PipeListener
-from mindwm.modules.text_processor import TextProcessor
+#from mindwm.modules.text_processor import TextProcessor
 from mindwm.modules.dbus_interface import DbusInterface
 from mindwm.modules.surrealdb_interface import SurrealDbInterface
+
+class TmuxSession:
+    def __init__(self, tmux):
+        pass
 
 
 class Manager:
     def __init__(self):
-        env = {
-                "MINDWM_NATS_URL": config("MINDWM_NATS_URL", default="nats://user:pass@127.0.0.1/"),
-            #"MINDWM_ASCIINEMA_REC_PIPE": config("MINDWM_ASCIINEMA_REC_PIPE"),
-        }
         self.params = {
             "nats": {
                 "url": config("MINDWM_NATS_URL", default="nats://user:pass@127.0.0.1/"),
@@ -39,6 +39,7 @@ class Manager:
                 "callback": self.graph_event_callback,
             }
         }
+        pprint(self.params)
 
     async def init(self):
         # Nats interface
@@ -53,6 +54,7 @@ class Manager:
         # DBus interface
         self.dbus = DbusInterface()
         self._loop.create_task(self.dbus.init())
+
 
         # Pipe listener
         #self.pipe_listener = PipeListener(self.params['asciinema']['rec_pipe'], cb=self.input_callback)
@@ -123,7 +125,7 @@ class Manager:
                 await self.graphdb.update_edge(label, edge['A'], edge['B'])
 
             elif ty == "node":
-                #print(f"New node to create: {p}")
+                print(f"New node to create: {p}")
                 node = {
                     "id": p['id'],
                     "type": p['after']['labels'][0],

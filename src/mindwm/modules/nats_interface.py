@@ -11,7 +11,7 @@ class NatsInterface:
         self.url = url
         self.subs = {}
 
-    async def init(self):
+    async def _init(self):
         print(f"Initializing NATSListener for {self.url}")
         await self.connect()
 

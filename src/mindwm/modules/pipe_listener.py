@@ -15,7 +15,7 @@ class PipeListener:
         self.cb_word = cb_word
         self.cb_line = cb_line
 
-    async def init(self):
+    async def _init(self):
         self.screen = pyte.Screen(self.cols, self.rows)
         self.stream = pyte.ByteStream(self.screen)
         if not os.path.exists(self.pipe_path):

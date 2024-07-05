@@ -14,6 +14,8 @@ from dbus_next import Variant
 
 import asyncio
 from pprint import pprint
+from uuid import uuid4
+from base64 import b64encode
 
 # credits to https://blog.dalibo.com/2022/09/12/monitoring-python-subprocesses.html
 class MyProtocol(asyncio.subprocess.SubprocessStreamProtocol):
@@ -232,6 +234,83 @@ class ManagerInterface(ServiceInterface):
         return ['hello', 'world']
 
 
+class Actions(ServiceInterface):
+    def __init__(self, name, bus, dest, path, interface):
+        super().__init__(name)
+        self._bus = bus
+        self._destination = dest
+        self._path = path
+        self._interface = interface
+        self._connected = False
+
+    @method()
+    async def join(self, tmux_string : 's') -> 'i':
+        '''
+            pass $TMUX,$TMUX_PANE as a tmux_string
+        '''
+        [socket_path, pid, session_id, pane] = tmux_string.split(',')
+        self._tmux_socket = socket_path
+        self._tmux_pid = pid
+        self._tmux_session = session_id
+        self._tmux_pane_id = pane[1:]
+        # attach to tmux socket in control mode
+        destination = "org.mindwm.client.manager"
+        path = "/"
+        interface = "org.mindwm.client.manager"
+        member = "Run"
+        signature = "sss"
+        callback_member = "join_output"
+
+        body = [
+            f"tmux -S{self._tmux_socket} -C a -t%{self._tmux_pane_id}",
+            f"^(?!%output.*)",
+            f"destination={self._destination},path={self._path},interface={self._interface},member={callback_member}"
+        ]
+
+        msg = Message(
+            destination=destination,
+            path=path,
+            interface=interface,
+            member=member,
+            signature=signature,
+            body=body,
+            serial=self._bus.next_serial()
+        )
+        reply = await self._bus.call(msg)
+        assert reply.message_type == MessageType.METHOD_RETURN
+        self._tmux_process_uid = reply.body[0]
+        # TODO: better to return from this method and continue inside a worker thread
+        while not self._connected:
+            await asyncio.sleep(0.1)
+
+        session_uid = uuid4()
+        session_subject = f"mindwm.pion.snpnb.{b64encode(self._tmux_socket.encode('utf-8')).decode('utf-8')}.{uuid4()}.{self._tmux_session}.{self._tmux_pane_id}"
+        asciinema_socket = f"/tmp/asciinema-{session_subject}.socket"
+        join_cmd = f"asciinema rec --stdin --append {asciinema_socket}"
+        msg.body = [self._tmux_process_uid, f'send-keys -t %{self._tmux_pane_id} "{join_cmd}" Enter']
+        msg.member = "SendStdin"
+        msg.signature = 'ss'
+        reply = await self._bus.call(msg)
+        assert reply.message_type == MessageType.METHOD_RETURN
+
+        # terminate watcher
+        msg.body = [self._tmux_process_uid]
+        msg.member = "Kill"
+        msg.signature = 's'
+        await self._bus.call(msg)
+
+        return 0
+
+    @method()
+    async def join_output(self, uid: 's', output: 's', is_terminated: 'b') -> 'i':
+        if not is_terminated:
+            self._connected = True
+        else:
+            self._connected = False
+
+        print(f"({uid}) {output} ({is_terminated})")
+        return 0
+
 class DbusInterface():
     def __init__(self):
         pass
@@ -243,7 +322,11 @@ class DbusInterface():
     
         bus = await MessageBus(bus_type = BusType.SESSION).connect()
         self.interface = ManagerInterface(self.interface_name, bus)
+        self.actions_interface = Actions(self.interface_name, bus, self.name, "/actions", self.interface_name)
         bus.export(self.path, self.interface)
+        #bus.export(f"/{self.interface_name.replace('.','/')}/actions", self.actions_interface)
+        bus.export(f"/actions", self.actions_interface)
+
         await bus.request_name(self.name)
         print(f'service up on name: "{self.name}", path: "{self.path}", interface: "{self.interface_name}"')
         await bus.wait_for_disconnect()
