@@ -1,6 +1,11 @@
 # Quick start
 
 
+start local surrealdb in dedicated container
+```sh
+docker run --rm --pull always --name surrealdb -p 8000:8000 surrealdb/surrealdb:latest start
+```
+
 source environment and start mindwm-manager
 ```sh
 direnv reload
