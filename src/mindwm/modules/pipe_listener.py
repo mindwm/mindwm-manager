@@ -7,13 +7,14 @@ import time
 from pprint import pprint
 
 class PipeListener:
-    def __init__(self, pipe_path, cb=None, cb_word=None, cb_line=None):
+    def __init__(self, pipe_path, prompt_terminators, cb=None, cb_word=None, cb_line=None):
         self.rows = 1
         self.cols = 220
         self.pipe_path = pipe_path
         self.callback = cb
         self.cb_word = cb_word
         self.cb_line = cb_line
+        self.prompt_terminators = prompt_terminators
 
     async def _init(self):
         self.screen = pyte.Screen(self.cols, self.rows)
@@ -64,7 +65,7 @@ class PipeListener:
                 last_line = (lines[-1:][0]).strip()
                 #pprint(last_line, width=200)
        
-                if d == 'o' and (last_line.endswith("$") or last_line.endswith("❯") or last_line.endswith("➜")):
+                if d == 'o' and (last_line[-1:] in self.prompt_terminators):
                     input_final = self.sanitize(cmd_line).strip()
                     if self.cb_word:
                         await self.cb_word(last_line)
@@ -80,7 +81,8 @@ class PipeListener:
                     output = ""
                     cmd_line = ""
                     if self.callback:
-                        await self.callback(json.dumps(payload))
+                        if payload['input'] != "" and payload['output'] != "":
+                            await self.callback(json.dumps(payload))
 
                     continue
        
