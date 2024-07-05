@@ -10,10 +10,8 @@ class NatsInterface:
         self.nc = None
         self.url = url
         self.subs = {}
-        #self._loop = asyncio.get_event_loop()
-        #self._loop = asyncio.new_event_loop()
 
-    async def init(self):
+    async def _init(self):
         print(f"Initializing NATSListener for {self.url}")
         await self.connect()
 
@@ -45,11 +43,7 @@ class NatsInterface:
 
         await self.nc.publish(subj, payload)
 
-    async def message_handler2(self, msg):
-        print(f"new message received: {msg}")
-
     async def message_handler(self, subj, callback, msg):
-        print(f"new message received: {msg}")
         data = json.loads(msg.data.decode())
         if 'message' in data.keys():
             message = data['message']
