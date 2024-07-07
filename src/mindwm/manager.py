@@ -3,7 +3,9 @@ from base64 import b64encode
 from dbus_next.service import ServiceInterface, method, signal, dbus_property
 from dbus_next.aio.message_bus import Message, MessageType, MessageBus
 from dbus_next.constants import BusType
+
 from decouple import config
+from enum import IntFlag, auto
 import hashlib
 import json
 from pprint import pprint
@@ -14,6 +16,13 @@ from mindwm.modules.nats_interface import NatsInterface
 from mindwm.modules.subprocess import Subprocess
 from mindwm.modules.surrealdb_interface import SurrealDbInterface
 from mindwm.modules.tmux_session import TmuxSessionService
+
+
+class Event(IntFlag):
+    GRAPH_NODE_CREATED = 1
+    GRAPH_NODE_DELETED = 2
+    GRAPH_EDGE_CREATED = 4
+    GRAPH_EDGE_DELETED = 8
 
 
 class ManagerService(ServiceInterface):
@@ -44,6 +53,7 @@ class ManagerService(ServiceInterface):
         self._bus.export(f"{self.dbus_service['path']}service", self)
         self.nats = NatsInterface(self.params['nats']['url'])
         self.graphdb = SurrealDbInterface(self.params['surrealdb']['url'])
+        self.subscribers = {}
 
     async def _init(self):
         self.sessions = {}
@@ -57,8 +67,39 @@ class ManagerService(ServiceInterface):
     async def loop(self):
         await self._bus.wait_for_disconnect()
 
+    async def notify(self, event : Event, payload : str):
+        tmp = dict(self.subscribers)
+        for k, v in tmp.items():
+            if v & event:
+                print(f"notify {k} about {event} with {payload}")
+                res = await self.send2dbus(k, event, payload)
+                if not res:
+                    print(f"failed to send to {k}. Remove from subscribers")
+                    del self.subscribers[k]
+
+    async def send2dbus(self, destination, event, payload):
+        dest = dict(list(map(lambda x: x.split('='), destination.split(','))))
+        reply = [event, payload]
+        try:
+            msg = Message(
+                destination=dest['destination'],
+                path=dest['path'],
+                interface=dest['interface'],
+                member=dest['member'],
+                signature='xs',
+                body=reply,
+                serial=self._bus.next_serial()
+            )
+            reply = await self._bus.call(msg)
+            print(reply)
+        except:
+            return False
+
+        return True
+        #assert reply.message_type == MessageType.METHOD_RETURN
+
+
     async def iodoc_callback(self, uuid, iodoc):
-        print(f"{uuid}: payload: {iodoc}")
         t = "iodocument"
         subject = self.sessions[uuid]['subject_iodoc']
         payload = {
@@ -74,7 +115,7 @@ class ManagerService(ServiceInterface):
             "id": str(uuid4()),
         }
 
-        print(f"sent to subj: {subject}: {payload}")
+        print(f"NATS->{subject}\n{payload}")
         await self.nats.publish(subject, bytes(json.dumps(payload), encoding='utf-8'))
 
     async def graph_event_callback(self, event):
@@ -100,6 +141,13 @@ class ManagerService(ServiceInterface):
                     {"id": edge_from['id'], "type": edge_from['labels'][0]},
                     {"id": edge_to['id'], "type": edge_to['labels'][0]},
                 )
+                event_payload = {
+                    "node_type": "relationship",
+                    "edge_name": edge_name,
+                    "from": {"id": edge_from['id'], "type": edge_from['labels'][0]},
+                    "to": {"id": edge_to['id'], "type": edge_to['labels'][0]},
+                }
+                await self.notify(Event.GRAPH_EDGE_CREATED, json.dumps(event_payload))
             else:
                 print(f"unimplemented opration {operation} for {source}")
 
@@ -112,6 +160,12 @@ class ManagerService(ServiceInterface):
                     "type": data['labels'][0],
                     "payload": data
                 })
+                event_payload = {
+                    "node_id": node_id,
+                    "node_type": data['labels'][0],
+                    "node_data": data,
+                }
+                await self.notify(Event.GRAPH_NODE_CREATED, json.dumps(event_payload))
             else:
                 print(f"unimplemented opration {operation} for {source}")
 
@@ -146,6 +200,13 @@ class ManagerService(ServiceInterface):
         pprint(self.sessions)
         return True
 
+    #@method(sender_keyword="sender")
+    @method()
+    async def subscribe(self, events : 'x', subscriber: 's') -> 'b':
+        print(f"{subscriber} subscribed on {events}")
+        self.subscribers[subscriber] = events
+        print(self.subscribers)
+        return True
 
 class Manager:
     def _init__(self):
@@ -159,6 +220,7 @@ class Manager:
         }
 
         self._bus = await MessageBus(bus_type = BusType.SESSION).connect()
+
         await self._bus.request_name(self.dbus_service['destination'])
         print(f"DBus service: {self.dbus_service}")
 
