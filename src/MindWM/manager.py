@@ -38,6 +38,7 @@ class ManagerService(ServiceInterface):
             },
             "surrealdb": {
                 "url": config("MINDWM_SURREALDB_URL", default="ws://localhost:8000/mindwm/context_graph"),
+                "enabled": config("MINDWM_SURREALDB_ENABLED", default=False, cast=bool),
             },
             "prompt_terminators": config("MINDWM_PROMPT_TERMINATORS", default="$,❯,➜").split(',')
         }
@@ -52,14 +53,17 @@ class ManagerService(ServiceInterface):
         self._bus = bus
         self._bus.export(f"{self.dbus_service['path']}service", self)
         self.nats = NatsInterface(self.params['nats']['url'])
-        self.graphdb = SurrealDbInterface(self.params['surrealdb']['url'])
+        if self.params['surrealdb']['enabled']:
+            self.graphdb = SurrealDbInterface(self.params['surrealdb']['url'])
+
         self.subscribers = {}
 
     async def _init(self):
         self.sessions = {}
         await self.nats._init()
-        await self.graphdb._init()
-        self._loop.create_task(self.graphdb.loop())
+        if self.params['surrealdb']['enabled']:
+            await self.graphdb._init()
+            self._loop.create_task(self.graphdb.loop())
 
         for k, v in self.params['nats']['listen'].items():
             await self.nats.subscribe(v['subject'], v['callback'])
@@ -118,6 +122,9 @@ class ManagerService(ServiceInterface):
 
     async def graph_event_callback(self, event):
         #pprint(event)
+        if not self.params['surrealdb']['enabled']:
+            return
+
         if 'data' in event.keys():
             data = event['data']
         else:
