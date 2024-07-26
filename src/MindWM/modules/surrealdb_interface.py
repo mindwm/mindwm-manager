@@ -16,10 +16,21 @@ class SurrealDbInterface:
             await asyncio.sleep(1)
 
     async def update_node(self, node):
-        await self._db.create(f"{node['type']}:{node['id']}", node['payload'])
+        q = f"""
+            update {node['type']}:{node['id']} content {{ {node['payload']} }};
+        """
+        await self._db.query(q)
 
     async def update_edge(self, edge_type, node_a, node_b):
         await self._db.query(f"""
           relate {node_a['type']}:{node_a['id']}->{edge_type}->{node_b['type']}:{node_b['id']}
         """
         )
+
+    async def get_node_by_id(self, node_type, node_id):
+        q = f"""
+            SELECT * from {node_type} where id = {node_type}:{node_id};
+        """
+        #print(f"Query: {q}")
+        res = await self._db.query(q)
+        return res

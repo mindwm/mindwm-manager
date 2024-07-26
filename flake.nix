@@ -22,6 +22,7 @@
           dbus-next
           pyte
           textfsm tabulate
+          pydantic dateutil urllib3
         ]);
         project = pkgs.callPackage ./package.nix {
           python = my_python;
