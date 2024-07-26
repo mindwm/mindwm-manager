@@ -32,6 +32,7 @@ class TouchEvent(BaseModel):
     id: Annotated[str, Field(min_length=1, strict=True)] = Field(description="Identifies the event.")
     source: StrictStr
     specversion: Annotated[str, Field(min_length=1, strict=True)] = Field(description="The version of the CloudEvents specification which the event uses.")
+    knativebrokerttl: Annotated[str, Field(min_length=1, strict=True)] = Field(description="The veeeeee")
     type: StrictStr
     datacontenttype: Optional[Annotated[str, Field(min_length=1, strict=True)]] = Field(default=None, description="Content type of the data value. Must adhere to RFC 2046 format.")
     dataschema: Optional[Annotated[str, Field(min_length=1, strict=True)]] = Field(default=None, description="Identifies the schema that data adheres to.")
