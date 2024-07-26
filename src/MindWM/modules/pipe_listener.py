@@ -5,6 +5,7 @@ import pyte
 import json
 import time
 from pprint import pprint
+from MindWM.models import IoDocument
 
 class PipeListener:
     def __init__(self, pipe_path, prompt_terminators, cb=None, cb_word=None, cb_line=None):
@@ -73,16 +74,17 @@ class PipeListener:
                     if self.cb_line:
                         await self.cb_line(last_line)
 
-                    payload = {
-                        "ps1": last_line,
-                        "input": input_final,
-                        "output": output
-                    }
+                    if input_final != "" and output != "":
+                        payload = IoDocument(
+                            ps1=last_line,
+                            input=input_final,
+                            output=output.strip()
+                            )
+                        if self.callback:
+                            await self.callback(payload)
+
                     output = ""
                     cmd_line = ""
-                    if self.callback:
-                        if payload['input'] != "" and payload['output'] != "":
-                            await self.callback(json.dumps(payload))
 
                     continue
        

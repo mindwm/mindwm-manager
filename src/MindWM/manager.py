@@ -12,11 +12,11 @@ from pprint import pprint
 from signal import SIGINT, SIGTERM
 from uuid import UUID, uuid4
 
-from mindwm.modules.nats_interface import NatsInterface
-from mindwm.modules.subprocess import Subprocess
-from mindwm.modules.surrealdb_interface import SurrealDbInterface
-from mindwm.modules.tmux_session import TmuxSessionService
-
+from MindWM.modules.nats_interface import NatsInterface
+from MindWM.modules.subprocess import Subprocess
+from MindWM.modules.surrealdb_interface import SurrealDbInterface
+from MindWM.modules.tmux_session import TmuxSessionService
+from MindWM.models import IoDocumentEvent
 
 class Event(IntFlag):
     GRAPH_NODE_CREATED = 1
@@ -102,21 +102,19 @@ class ManagerService(ServiceInterface):
     async def iodoc_callback(self, uuid, iodoc):
         t = "iodocument"
         subject = self.sessions[uuid]['subject_iodoc']
-        payload = {
-            "knativebrokerttl": "255",
-            "specversion": "1.0",
-            "type": t,
-            "source": f"{subject}",
-            "subject": f"{subject}",
-            "datacontenttype": "application/json",
-            "data": {
-               t: json.loads(iodoc),
-            },
-            "id": str(uuid4()),
-        }
+        payload = IoDocumentEvent(
+            id = str(uuid4()),
+            knativebrokerttl = "255",
+            specversion = "1.0",
+            type = t,
+            source = f"{subject}",
+            subject = f"{subject}",
+            datacontenttype = "application/json",
+            data = iodoc
+            )
 
         print(f"NATS->{subject}\n{payload}")
-        await self.nats.publish(subject, bytes(json.dumps(payload), encoding='utf-8'))
+        await self.nats.publish(subject, bytes(payload.to_json(), encoding='utf-8'))
 
     async def graph_event_callback(self, event):
         #pprint(event)
@@ -127,7 +125,6 @@ class ManagerService(ServiceInterface):
 
         source = event['source']
         operation = event['type']
-        obj_type = event['subject']
 
         print(f"received {operation} for {source}")
 

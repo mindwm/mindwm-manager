@@ -1,9 +1,9 @@
 import asyncio
-from mindwm.modules.subprocess import Subprocess
+from MindWM.modules.subprocess import Subprocess
 from dbus_next.service import ServiceInterface, method, signal, dbus_property
 from dbus_next.aio.message_bus import Message, MessageType, MessageBus
 from dbus_next.constants import BusType
-from mindwm.modules.pipe_listener import PipeListener
+from MindWM.modules.pipe_listener import PipeListener
 
 
 class TmuxSessionService(ServiceInterface):
