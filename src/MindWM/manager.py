@@ -16,7 +16,7 @@ from MindWM.modules.nats_interface import NatsInterface
 from MindWM.modules.subprocess import Subprocess
 from MindWM.modules.surrealdb_interface import SurrealDbInterface
 from MindWM.modules.tmux_session import TmuxSessionService
-from MindWM.models import IoDocumentEvent
+from MindWM.models import IoDocumentEvent, Touch, TouchEvent
 
 class Event(IntFlag):
     GRAPH_NODE_CREATED = 1
@@ -128,11 +128,27 @@ class ManagerService(ServiceInterface):
 
         print(f"received {operation} for {source}")
 
+        touch_nodes = []
         if source == 'graph.relationship':
             edge_from = event['data']['payload']['start']
             edge_to = event['data']['payload']['end']
             edge_name = event['data']['payload']['label']
-            if operation == "created":
+            if operation == "created" or operation == "updated":
+                node_from_id = edge_from['id']
+                node_from_type = edge_from['labels'][0]
+                node_to_id = edge_to['id']
+                node_to_type = edge_to['labels'][0]
+
+                node_from = await self.graphdb.get_node_by_id(node_from_type, node_from_id)
+                node_to = await self.graphdb.get_node_by_id(node_to_type, node_to_id)
+                if not node_from:
+                    print(f"Node: {node_from_type}:{node_from_id} not found")
+                    touch_nodes.append(int(node_from_id))
+
+                if not node_to:
+                    print(f"Node: {node_to_type}:{node_to_id} not found")
+                    touch_nodes.append(int(node_to_id))
+
                 await self.graphdb.update_edge(
                     edge_name,
                     {"id": edge_from['id'], "type": edge_from['labels'][0]},
@@ -151,7 +167,7 @@ class ManagerService(ServiceInterface):
         elif source == 'graph.node':
             node_id = event['data']['payload']['id']
             data = event['data']['payload']['after']
-            if operation == "created":
+            if operation == "created" or operation == "updated":
                 await self.graphdb.update_node({
                     "id": node_id,
                     "type": data['labels'][0],
@@ -168,6 +184,22 @@ class ManagerService(ServiceInterface):
 
         else:
             print(f"Unknown source: {source}")
+
+        if touch_nodes:
+            payload = TouchEvent(
+                id = str(uuid4()),
+                knativebrokerttl = "255",
+                specversion = "1.0",
+                type = "touch",
+                source = "mindwm.pion.snpnb.manager",
+                subject = "node",
+                datacontenttype = "application/json",
+                data = Touch(ids=touch_nodes)
+                )
+
+            print(f"NATS->{payload}")
+            subject = f"{self.params['nats']['subject_prefix']}.touch"
+            await self.nats.publish(subject, bytes(payload.to_json(), encoding='utf-8'))
 
 
     @method()
