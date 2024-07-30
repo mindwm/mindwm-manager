@@ -51,7 +51,7 @@ class TmuxSessionService(ServiceInterface):
 
     async def output_callback(self, uid, output, is_terminated):
         self._subproc_running = not is_terminated
-        print(f"{uid}: {output} ({is_terminated})")
+        #print(f"{uid}: {output} ({is_terminated})")
 
     async def terminated_callback(self, uid):
         print(f"{uid}: terminated")
