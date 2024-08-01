@@ -23,6 +23,7 @@
           pyte
           textfsm tabulate
           pydantic dateutil urllib3
+          opentelemetry-sdk opentelemetry-exporter-otlp
         ]);
         project = pkgs.callPackage ./package.nix {
           python = my_python;
