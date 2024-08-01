@@ -6,7 +6,8 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
     )
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource, HOST_NAME
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as OTLPSpanGrpcExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
@@ -32,13 +33,33 @@ from MindWM.modules.surrealdb_interface import SurrealDbInterface
 from MindWM.modules.tmux_session import TmuxSessionService
 from MindWM.models import IoDocumentEvent, Touch, TouchEvent
 
-trace.set_tracer_provider(TracerProvider())
-trace.get_tracer_provider().add_span_processor(
-    BatchSpanProcessor(ConsoleSpanExporter())
-)
+# Specify the application name and hostname.
+resource = Resource(attributes={
+    SERVICE_NAME: "mindwm-manager",
+    HOST_NAME: "snpnb"
+})
+# Use the gRPC protocol to report data.
+span_processor = BatchSpanProcessor(OTLPSpanGrpcExporter(
+    #    endpoint="http://127.0.0.1:4317/v1/traces",
+    endpoint="http://10.20.30.11:4317/v1/traces",
+    #    headers=("Authentication=<token>")
+))
+# Use the HTTP protocol to report data.
+# span_processor = BatchSpanProcessor(OTLPSpanHttpExporter(
+#     endpoint="<endpoint>",
+# ))
+trace_provider = TracerProvider(resource=resource, active_span_processor=span_processor)
+trace.set_tracer_provider(trace_provider)
+
+
+#trace.get_tracer_provider().add_span_processor(
+#    BatchSpanProcessor(ConsoleSpanExporter())
+#)
 
 #logger = logging.getLogger(__name__)
-logger = logging.getLogger("manager")
+logger = logging.getLogger("MindWM.manager")
+tracer = trace.get_tracer("MindWM.manager")
+
 
 class Event(IntFlag):
     GRAPH_NODE_CREATED = 1
@@ -83,10 +104,15 @@ class ManagerService(ServiceInterface):
         set_logger_provider(logger_provider)
         logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s [%(levelname)s] %(message)s')
         # TODO: I'm not sure that we need to send local logs to a external collector
-        #exporter = OTLPLogExporter(insecure=True)
-        #logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
-        #handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
-        #logging.getLogger().addHandler(handler)
+        exporter = OTLPLogExporter(
+            insecure=True,
+            #endpoint="http://10.20.30.11:4417/otlp/v1/logs",
+            endpoint="http://10.20.30.11:4417",
+            #endpoint="http://127.0.0.1:4317",
+        )
+        logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+        handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
+        logging.getLogger().addHandler(handler)
 
         #self.log = logging.getLogger("manager")
         logger.debug("Manager instance created")
@@ -101,6 +127,24 @@ class ManagerService(ServiceInterface):
             self.graphdb = SurrealDbInterface(self.params['surrealdb']['url'])
 
         self.subscribers = {}
+
+    def init_opentelemetry():
+        # Specify the application name and hostname.
+        resource = Resource(attributes={
+            SERVICE_NAME: "mindwm-manager",
+            HOST_NAME: "<host-name>"
+        })
+        # Use the gRPC protocol to report data.
+        span_processor = BatchSpanProcessor(OTLPSpanGrpcExporter(
+            endpoint="http://127.0.0.1:4317/v1/traces",
+            #            headers=("Authentication=<token>")
+        ))
+        # Use the HTTP protocol to report data.
+        # span_processor = BatchSpanProcessor(OTLPSpanHttpExporter(
+        #     endpoint="<endpoint>",
+        # ))
+        trace_provider = TracerProvider(resource=resource, active_span_processor=span_processor)
+        trace.set_tracer_provider(trace_provider)
 
     async def _init(self):
         self.sessions = {}
@@ -139,7 +183,7 @@ class ManagerService(ServiceInterface):
                 serial=self._bus.next_serial()
             )
             reply = await self._bus.call(msg)
-            logger.debug(reply)
+            #logger.debug(reply)
         except:
             return False
 
@@ -161,8 +205,9 @@ class ManagerService(ServiceInterface):
             data = iodoc
             )
 
-        logger.debug(f"NATS->{subject}\n{payload}")
-        await self.nats.publish(subject, bytes(payload.to_json(), encoding='utf-8'))
+        with tracer.start_as_current_span("iodocument") as span:
+            #logger.debug(f"NATS->{subject}\n{payload}")
+            await self.nats.publish(subject, payload)
 
     async def graph_event_callback(self, event):
         logger.debug(event)
@@ -277,7 +322,7 @@ class ManagerService(ServiceInterface):
             "subject_feedback": f"{self.params['nats']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.feedback",
         }
         self.tmux_control = self._loop.create_task(tmux_session_service.loop())
-        logger.debug(self.sessions)
+        logger.debug(str(self.sessions))
         return True
 
     #@method(sender_keyword="sender")
