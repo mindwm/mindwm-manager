@@ -1,4 +1,6 @@
 import logging
+from opentelemetry import trace
+from datetime import datetime
 
 import asyncio
 from functools import partial
@@ -7,6 +9,7 @@ import json
 from time import sleep
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer(__name__)
 
 class NatsInterface:
     def __init__(self, url):
@@ -38,13 +41,19 @@ class NatsInterface:
         await self.nc.subscribe(subj, cb=handler)
         logger.info(f"Subscribed to NATS subject: {subj}")
 
-    async def publish(self, subj, msg):
-        if type(msg) == str:
-            payload = msg.encode('utf-8')
-        else:
-            payload = msg
-
-        await self.nc.publish(subj, payload)
+    async def publish(self, subj, payload):
+        with tracer.start_as_current_span("publish") as span:
+            ctx = span.get_span_context()
+            traceId = ("%0.2X" % ctx.trace_id).lower()
+            spanId = ("%0.2X" % ctx.span_id).lower()
+            headers = {}
+            payload.traceparent = f"00-{traceId}-{spanId}-01"
+#            headers = {
+#                "TraceId": traceId,
+#                "SpanId": spanId,
+#            }
+            logger.debug(f"send message to {subj}: {payload}")
+            await self.nc.publish(subj, bytes(payload.to_json(), encoding='utf-8'), headers=headers)
 
     async def message_handler(self, subj, callback, msg):
         data = json.loads(msg.data.decode())
