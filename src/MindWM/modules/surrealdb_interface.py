@@ -1,5 +1,8 @@
+import logging
 import asyncio
 from surrealdb import AsyncSurrealDB
+
+logger = logging.getLogger(__name__)
 
 class SurrealDbInterface:
     def __init__(self, url):
@@ -8,10 +11,10 @@ class SurrealDbInterface:
 
     async def _init(self):
         await self._db.connect()
-        print(f"Connected to SurrealDB on {self._url}")
+        logger.info(f"Connected to SurrealDB on {self._url}")
 
     async def loop(self):
-        print(f"Starting main loop of SurrealDB Interface")
+        logger.info(f"Starting main loop of SurrealDB Interface")
         while True:
             await asyncio.sleep(1)
 
@@ -31,6 +34,6 @@ class SurrealDbInterface:
         q = f"""
             SELECT * from {node_type} where id = {node_type}:{node_id};
         """
-        #print(f"Query: {q}")
+        #logger.debug(f"Query: {q}")
         res = await self._db.query(q)
         return res

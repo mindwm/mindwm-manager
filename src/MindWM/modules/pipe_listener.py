@@ -1,11 +1,13 @@
+import logging
 import asyncio
 import aiofiles
 import os
 import pyte
 import json
 import time
-from pprint import pprint
 from MindWM.models import IoDocument
+
+logger = logging.getLogger(__name__)
 
 class PipeListener:
     def __init__(self, pipe_path, prompt_terminators, cb=None, cb_word=None, cb_line=None):
@@ -21,10 +23,10 @@ class PipeListener:
         self.screen = pyte.Screen(self.cols, self.rows)
         self.stream = pyte.ByteStream(self.screen)
         if not os.path.exists(self.pipe_path):
-            print(f"creating new PIPE: {self.pipe_path}")
+            logger.info(f"creating new PIPE: {self.pipe_path}")
             os.mkfifo(self.pipe_path)
 
-        print(f"listening for Asciinema on {self.pipe_path}")
+        logger.info(f"listening for Asciinema on {self.pipe_path}")
 
     def sanitize(self, chunk_raw):
         self.screen.reset()
@@ -49,22 +51,22 @@ class PipeListener:
                 try:
                     _t, d, chunk_raw = json.loads(l)
                 except Exception as e:
-                    print(f"cannot parse {l} as json")
+                    logger.error(f"cannot parse {l} as json")
        
                 lines_raw = chunk_raw.split('\r\n')
                 try:
                     lines = list(map(self.sanitize, lines_raw))
                 except TypeError as e:
-                    print(f"failed to sanitize stream: {e}")
+                    logger.error(f"failed to sanitize stream: {e}")
                     user_input = False
                     is_prompt = False
                     cmd_line = ""
                     output = ""
                     continue
 
-                #pprint(f"{d}: {user_input}: {chunk_raw}", width=200)
+                #logger.debug(f"{d}: {user_input}: {chunk_raw}", width=200)
                 last_line = (lines[-1:][0]).strip()
-                #pprint(last_line, width=200)
+                #logger.debug(last_line, width=200)
        
                 if d == 'o' and (last_line[-1:] in self.prompt_terminators):
                     input_final = self.sanitize(cmd_line).strip()
@@ -110,7 +112,7 @@ class PipeListener:
                 elif d == 'i' and chunk_raw == "\u0003":
                     user_input = False
                     cmd_line = ""
-                    pprint("user command canceled")
+                    logger.debug("user command canceled")
                 elif d == 'i' and chunk_raw == '\r':
                     if self.cb_line:
                         if word_buf and self.cb_word:

@@ -1,9 +1,12 @@
+import logging
+
 import asyncio
 from functools import partial
 import nats
 import json
 from time import sleep
 
+logger = logging.getLogger(__name__)
 
 class NatsInterface:
     def __init__(self, url):
@@ -12,11 +15,11 @@ class NatsInterface:
         self.subs = {}
 
     async def _init(self):
-        print(f"Initializing NATSListener for {self.url}")
+        logger.info(f"Initializing NATSListener for {self.url}")
         await self.connect()
 
     async def loop(self):
-        print(f"Entering main NatsInterface loop")
+        logger.debug(f"Entering main NatsInterface loop")
 
         # TODO: need to catch a signals about connection state
         await asyncio.Future()
@@ -25,15 +28,15 @@ class NatsInterface:
     async def connect(self):
         if not self.nc:
             self.nc = await nats.connect(self.url)
-            print(f"Connected to {self.url}")
+            logger.info(f"Connected to {self.url}")
         else:
-            print("already connected")
+            logger.info("already connected")
 
     async def subscribe(self, subj, callback):
         self.subs[subj] = {}
         handler = partial(self.message_handler, subj, callback)
         await self.nc.subscribe(subj, cb=handler)
-        print(f"Subscribed to NATS subject: {subj}")
+        logger.info(f"Subscribed to NATS subject: {subj}")
 
     async def publish(self, subj, msg):
         if type(msg) == str:
@@ -60,7 +63,7 @@ async def app():
     loop.create_task(n.loop())
 
     async def nats_message_callback(msg):
-        print(msg)
+        logger.debug(msg)
 
     nats_iodoc_topic = "mindwm.root.mindwm-client.tmux.L3RtcC90bXV4LTAvZGVmYXVsdCwyMCww.25a67850-028d-4424-abc6-552fb8ea7775.0.0.test"
     nats_iodoc_topic2 = "mindwm.root.mindwm-client.tmux.L3RtcC90bXV4LTAvZGVmYXVsdCwyMCww.25a67850-028d-4424-abc6-552fb8ea7775.0.0.test2"
@@ -71,7 +74,7 @@ async def app():
     while True:
         await asyncio.sleep(1)
 
-    print("Done")
+    logger.info("Done")
 
 if __name__ == "__main__":
     asyncio.run(app())

@@ -1,3 +1,18 @@
+import logging
+from opentelemetry import trace
+from opentelemetry._logs import set_logger_provider
+from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
+    OTLPLogExporter,
+    )
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    ConsoleSpanExporter,
+    )
+
 import asyncio
 from base64 import b64encode
 from dbus_next.service import ServiceInterface, method, signal, dbus_property
@@ -8,7 +23,6 @@ from decouple import config
 from enum import IntFlag, auto
 import hashlib
 import json
-from pprint import pprint
 from signal import SIGINT, SIGTERM
 from uuid import UUID, uuid4
 
@@ -17,6 +31,14 @@ from MindWM.modules.subprocess import Subprocess
 from MindWM.modules.surrealdb_interface import SurrealDbInterface
 from MindWM.modules.tmux_session import TmuxSessionService
 from MindWM.models import IoDocumentEvent, Touch, TouchEvent
+
+trace.set_tracer_provider(TracerProvider())
+trace.get_tracer_provider().add_span_processor(
+    BatchSpanProcessor(ConsoleSpanExporter())
+)
+
+#logger = logging.getLogger(__name__)
+logger = logging.getLogger("manager")
 
 class Event(IntFlag):
     GRAPH_NODE_CREATED = 1
@@ -48,6 +70,28 @@ class ManagerService(ServiceInterface):
                 "callback": self.graph_event_callback,
             }
         }
+
+        # Initialize OTEL logging
+        logger_provider = LoggerProvider(
+            resource=Resource.create(
+                {
+                    "service.name": "mindwm-manager",
+                    "service.instance.id": self.params['nats']['subject_prefix'],
+                }
+            ),
+        )
+        set_logger_provider(logger_provider)
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s [%(levelname)s] %(message)s')
+        # TODO: I'm not sure that we need to send local logs to a external collector
+        #exporter = OTLPLogExporter(insecure=True)
+        #logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+        #handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
+        #logging.getLogger().addHandler(handler)
+
+        #self.log = logging.getLogger("manager")
+        logger.debug("Manager instance created")
+
+
         self._loop = asyncio.get_event_loop()
         self.dbus_service = dbus_service
         self._bus = bus
@@ -75,10 +119,10 @@ class ManagerService(ServiceInterface):
         tmp = dict(self.subscribers)
         for k, v in tmp.items():
             if v & event:
-                print(f"notify {k} about {event} with {payload}")
+                logger.debug(f"notify {k} about {event} with {payload}")
                 res = await self.send2dbus(k, event, payload)
                 if not res:
-                    print(f"failed to send to {k}. Remove from subscribers")
+                    logger.error(f"failed to send to {k}. Remove from subscribers")
                     del self.subscribers[k]
 
     async def send2dbus(self, destination, event, payload):
@@ -95,7 +139,7 @@ class ManagerService(ServiceInterface):
                 serial=self._bus.next_serial()
             )
             reply = await self._bus.call(msg)
-            print(reply)
+            logger.debug(reply)
         except:
             return False
 
@@ -117,11 +161,11 @@ class ManagerService(ServiceInterface):
             data = iodoc
             )
 
-        print(f"NATS->{subject}\n{payload}")
+        logger.debug(f"NATS->{subject}\n{payload}")
         await self.nats.publish(subject, bytes(payload.to_json(), encoding='utf-8'))
 
     async def graph_event_callback(self, event):
-        #pprint(event)
+        logger.debug(event)
         if not self.params['surrealdb']['enabled']:
             return
 
@@ -133,7 +177,7 @@ class ManagerService(ServiceInterface):
         source = event['source']
         operation = event['type']
 
-        print(f"received {operation} for {source}")
+        logger.debug(f"received {operation} for {source}")
 
         touch_nodes = []
         if source == 'graph.relationship':
@@ -149,11 +193,11 @@ class ManagerService(ServiceInterface):
                 node_from = await self.graphdb.get_node_by_id(node_from_type, node_from_id)
                 node_to = await self.graphdb.get_node_by_id(node_to_type, node_to_id)
                 if not node_from:
-                    print(f"Node: {node_from_type}:{node_from_id} not found")
+                    logger.debug(f"Node: {node_from_type}:{node_from_id} not found")
                     touch_nodes.append(int(node_from_id))
 
                 if not node_to:
-                    print(f"Node: {node_to_type}:{node_to_id} not found")
+                    logger.debug(f"Node: {node_to_type}:{node_to_id} not found")
                     touch_nodes.append(int(node_to_id))
 
                 await self.graphdb.update_edge(
@@ -169,7 +213,7 @@ class ManagerService(ServiceInterface):
                 }
                 await self.notify(Event.GRAPH_EDGE_CREATED, json.dumps(event_payload))
             else:
-                print(f"unimplemented opration {operation} for {source}")
+                logger.warning(f"unimplemented opration {operation} for {source}")
 
         elif source == 'graph.node':
             node_id = event['data']['payload']['id']
@@ -187,10 +231,10 @@ class ManagerService(ServiceInterface):
                 }
                 await self.notify(Event.GRAPH_NODE_CREATED, json.dumps(event_payload))
             else:
-                print(f"unimplemented opration {operation} for {source}")
+                logger.warning(f"unimplemented opration {operation} for {source}")
 
         else:
-            print(f"Unknown source: {source}")
+            logger.error(f"Unknown source: {source}")
 
         if touch_nodes:
             payload = TouchEvent(
@@ -204,7 +248,7 @@ class ManagerService(ServiceInterface):
                 data = Touch(ids=touch_nodes)
                 )
 
-            print(f"NATS->{payload}")
+            logger.debug(f"NATS->{payload}")
             subject = f"{self.params['nats']['subject_prefix']}.touch"
             await self.nats.publish(subject, bytes(payload.to_json(), encoding='utf-8'))
 
@@ -233,15 +277,15 @@ class ManagerService(ServiceInterface):
             "subject_feedback": f"{self.params['nats']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.feedback",
         }
         self.tmux_control = self._loop.create_task(tmux_session_service.loop())
-        pprint(self.sessions)
+        logger.debug(self.sessions)
         return True
 
     #@method(sender_keyword="sender")
     @method()
     async def subscribe(self, events : 'x', subscriber: 's') -> 'b':
-        print(f"{subscriber} subscribed on {events}")
+        logger.info(f"{subscriber} subscribed on {events}")
         self.subscribers[subscriber] = events
-        print(self.subscribers)
+        logger.info(self.subscribers)
         return True
 
 class Manager:
@@ -258,13 +302,13 @@ class Manager:
         self._bus = await MessageBus(bus_type = BusType.SESSION).connect()
 
         await self._bus.request_name(self.dbus_service['destination'])
-        print(f"DBus service: {self.dbus_service}")
+        logger.info(f"DBus service: {self.dbus_service}")
 
         self.service = ManagerService(self.dbus_service, self._bus)
         await self.service._init()
 
     async def do_cleanup(self):
-        print("cleaning up")
+        logger.info("cleaning up")
         pass
 
     async def loop(self):

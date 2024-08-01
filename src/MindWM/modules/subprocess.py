@@ -1,7 +1,10 @@
+import logging
+
 import asyncio
 import functools
 import re
 
+logger = logging.getLogger(__name__)
 
 # credits to https://blog.dalibo.com/2022/09/12/monitoring-python-subprocesses.html
 class MyProtocol(asyncio.subprocess.SubprocessStreamProtocol):
@@ -88,8 +91,8 @@ class Subprocess():
     async def send_stdio(self, string):
         if self._proc:
             s = string + '\n'
-            print(f"send to stdio: {s}")
+            logger.debug(f"send to stdio: {s}")
             self._proc.stdin.write(s.encode())
         else:
-            print(f"{self._uid} is terminated")
+            logger.debug(f"{self._uid} is terminated")
 
