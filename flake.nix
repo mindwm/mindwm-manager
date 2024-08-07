@@ -34,7 +34,7 @@
             cmd = [ "${project}/bin/mindwm-manager" ];
           };
         };
-      in { 
+      in {
         packages.default = project;
         packages.docker = dockerImage;
         devShells.default = pkgs.mkShell {
@@ -42,6 +42,7 @@
           buildInputs = with pkgs; [
             my_python
             natscli
+            tmuxp
           ];
           shellHook = ''
             export PYTHONPATH="$PYTHONPATH:./src"

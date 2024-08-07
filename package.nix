@@ -1,5 +1,6 @@
 { lib
 , pkgs
+, tmuxp
 , python
 }:
 with pkgs;

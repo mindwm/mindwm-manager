@@ -1,0 +1,40 @@
+session_name: mindwm-manager
+windows:
+- focus: 'true'
+  layout: cab9,203x52,0,0[203x25,0,0,1,203x26,0,26,4]
+  options:
+    automatic-rename: 'off'
+  panes:
+  -
+    - source ~/.bashrc
+    - |
+      while :; do
+        echo -n .
+        pgrep -f 'python src/MindWM/manager.py' && sleep 2 && pgrep -f 'python src/MindWM/manager.py' && break
+        sleep 1
+      done
+    - ./join.sh
+  - focus: 'true'
+    shell_command:
+      - source ~/.bashrc
+      - direnv allow
+      - direnv reload
+      - set -a && source ./.env.sample && set +a
+      - |
+        while :; do
+          echo -n .
+          docker ps --filter 'name=surrealdb' | grep surrealdb && break
+          sleep 1
+        done
+      - python src/MindWM/manager.py
+  start_directory: /home/bebebeko/git/mindwm-manager
+  window_name: mindwm-manager
+-
+  options:
+    automatic-rename: 'off'
+  panes:
+  -
+    - |
+      docker ps --filter 'name=surrealdb' | grep surrealdb || docker run --rm --pull always --name surrealdb -p 8000:8000 surrealdb/surrealdb:latest start
+  start_directory: /home/bebebeko/git/mindwm-manager
+  window_name: surreal
