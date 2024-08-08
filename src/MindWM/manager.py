@@ -35,15 +35,14 @@ from MindWM.models import IoDocumentEvent, Touch, TouchEvent
 
 # Specify the application name and hostname.
 resource = Resource(attributes={
-    SERVICE_NAME: "mindwm-manager",
-    HOST_NAME: "snpnb"
+    SERVICE_NAME: "mindwm-manager"
 })
 # Use the gRPC protocol to report data.
-span_processor = BatchSpanProcessor(OTLPSpanGrpcExporter(
+span_processor = BatchSpanProcessor(OTLPSpanGrpcExporter())
     #    endpoint="http://127.0.0.1:4317/v1/traces",
-    endpoint="http://10.20.30.11:4317/v1/traces",
+#    endpoint="http://10.20.30.11:4317/v1/traces",
     #    headers=("Authentication=<token>")
-))
+#))
 # Use the HTTP protocol to report data.
 # span_processor = BatchSpanProcessor(OTLPSpanHttpExporter(
 #     endpoint="<endpoint>",
@@ -295,7 +294,8 @@ class ManagerService(ServiceInterface):
 
             logger.debug(f"NATS->{payload}")
             subject = f"{self.params['nats']['subject_prefix']}.touch"
-            await self.nats.publish(subject, bytes(payload.to_json(), encoding='utf-8'))
+            await self.nats.publish(subject, payload)
+            #await asyncio.sleep(10)
 
 
     @method()
