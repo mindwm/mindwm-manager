@@ -35,7 +35,7 @@ class TmuxSessionService(ServiceInterface):
         self._subproc_running = False
         self.tmux_control = self._loop.create_task(self.subprocess.start())
         logger.info(f"creating new PipeListener for {self.tmux_session}")
-        self.pipe_path = f"/tmp/mindwm-asciinema-{self.uuid}.socket"
+        self.pipe_path = f"/tmp/tmux-1000/mindwm-asciinema-{self.uuid}.socket"
         self.pipe_listener = PipeListener(
             self.pipe_path,
             self.prompt_terminators,
