@@ -6,6 +6,9 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     surrealdb-py.url = "github:omgbebebe/surrealdb.py-nix";
     surrealdb-py.inputs.nixpkgs.follows = "nixpkgs";
+    mindwm-sdk-python.url = "path:/home/pion/work/dev/mindwm/mindwm-sdk-python-ng";
+    #mindwm-sdk-python.url = "github:omgbebebe/mindwm-sdk-python-ng";
+    mindwm-sdk-python.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs@{ flake-parts, nixpkgs, ... }:
@@ -16,6 +19,7 @@
       let
         my_python = pkgs.python3.withPackages (ps: with ps; [
           inputs.surrealdb-py.packages.${system}.default
+          inputs.mindwm-sdk-python.packages.${system}.default
           nats-py
           python-decouple
           aiofiles
@@ -23,7 +27,6 @@
           pyte
           textfsm tabulate
           pydantic dateutil urllib3
-          opentelemetry-sdk opentelemetry-exporter-otlp
         ]);
         project = pkgs.callPackage ./package.nix {
           python = my_python;
@@ -38,9 +41,8 @@
         packages.default = project;
         packages.docker = dockerImage;
         devShells.default = pkgs.mkShell {
-#          packages = [ project ];
+          packages = [ my_python ];
           buildInputs = with pkgs; [
-            my_python
             natscli
             tmuxp
           ];

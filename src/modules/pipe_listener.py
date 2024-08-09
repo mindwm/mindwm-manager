@@ -1,14 +1,11 @@
 import logging
-from opentelemetry import trace
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
 import asyncio
 import aiofiles
 import os
 import pyte
 import json
 import time
-from MindWM.models import IoDocument
+from mindwm.model.objects import IoDocument
 
 logger = logging.getLogger(__name__)
 class PipeListener:
@@ -20,14 +17,6 @@ class PipeListener:
         self.cb_word = cb_word
         self.cb_line = cb_line
         self.prompt_terminators = prompt_terminators
-
-        resource = Resource(attributes = {
-            "service.name": "PipeListener",
-            "service.instance.id": pipe_path,
-        })
-        trace.set_tracer_provider(TracerProvider(resource=resource))
-        self.tracer = trace.get_tracer(__name__)
-
 
     async def _init(self):
         self.screen = pyte.Screen(self.cols, self.rows)
@@ -45,8 +34,7 @@ class PipeListener:
 
     async def push_iodoc(self, payload):
         if self.callback:
-            with self.tracer.start_as_current_span("push_iodoc"):
-                await self.callback(payload)
+            await self.callback(payload)
 
     async def loop(self):
         async with aiofiles.open(self.pipe_path, mode='rb') as f:

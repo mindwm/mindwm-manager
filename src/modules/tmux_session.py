@@ -1,15 +1,13 @@
-import logging
-from opentelemetry import trace
+from mindwm import logging
 import asyncio
-from MindWM.modules.subprocess import Subprocess
+from .subprocess import Subprocess
 from dbus_next.service import ServiceInterface, method, signal, dbus_property
 from dbus_next.aio.message_bus import Message, MessageType, MessageBus
 from dbus_next.constants import BusType
-from MindWM.modules.pipe_listener import PipeListener
+from .pipe_listener import PipeListener
 
 
 logger = logging.getLogger(__name__)
-tracer = trace.get_tracer(__name__)
 
 class TmuxSessionService(ServiceInterface):
     def __init__(self, uuid, dbus_service, tmux_session, prompt_terminators, bus, iodoc_callback):
@@ -62,9 +60,7 @@ class TmuxSessionService(ServiceInterface):
         logger.debug(f"{uid}: terminated")
 
     async def pipe_callback(self, payload):
-        with tracer.start_as_current_span("pipe_callback"):
-            #logger.debug(payload)
-            await self._iodoc_callback(self.uuid, payload)
+        await self._iodoc_callback(self.uuid, payload)
 
     async def loop(self):
         logger.debug(f"{self.tmux_control}")
