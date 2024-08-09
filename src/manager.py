@@ -17,7 +17,7 @@ from modules.nats_interface import NatsInterface
 from modules.subprocess import Subprocess
 from modules.surrealdb_interface import SurrealDbInterface
 from modules.tmux_session import TmuxSessionService
-from mindwm.model.events import IoDocumentEvent, TouchEvent
+from mindwm.model.events import IoDocumentEvent, TouchEvent, CloudEvent
 from mindwm.model.objects import Touch
 
 logging.basicConfig(level=logging.DEBUG)
@@ -112,7 +112,10 @@ class ManagerService(ServiceInterface):
     async def iodoc_callback(self, uuid, iodoc):
         t = "iodocument"
         subject = self.sessions[uuid]['subject_iodoc']
-        payload = IoDocumentEvent(
+        ev = IoDocumentEvent(
+            data = iodoc
+            )
+        payload = CloudEvent(
             id = str(uuid4()),
             knativebrokerttl = "255",
             specversion = "1.0",
@@ -120,7 +123,7 @@ class ManagerService(ServiceInterface):
             source = f"{subject}",
             subject = f"{subject}",
             datacontenttype = "application/json",
-            data = iodoc
+            data = ev,
             )
 
         await self.nats.publish(subject, payload)
