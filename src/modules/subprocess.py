@@ -1,4 +1,4 @@
-import logging
+from mindwm import logging
 
 import asyncio
 import functools
