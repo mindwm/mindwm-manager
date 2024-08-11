@@ -104,14 +104,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1723141150,
-        "narHash": "sha256-jztskMZHI5zLZAKK5v+H/ebMBttt1nnNwSJV31Sk6vk=",
-        "path": "/home/pion/work/dev/mindwm/mindwm-sdk-python-ng",
-        "type": "path"
+        "lastModified": 1723391498,
+        "narHash": "sha256-76RSPH7uVSxIrU08Iex09xrIED2HmG7VjMbqB06YOxA=",
+        "owner": "mindwm",
+        "repo": "mindwm-sdk-python-ng",
+        "rev": "1af13ecf02f566dadf6659e93b27129e339c886e",
+        "type": "github"
       },
       "original": {
-        "path": "/home/pion/work/dev/mindwm/mindwm-sdk-python-ng",
-        "type": "path"
+        "owner": "mindwm",
+        "repo": "mindwm-sdk-python-ng",
+        "type": "github"
       }
     },
     "neontology-py": {
@@ -123,16 +126,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1723029510,
-        "narHash": "sha256-7lrYXK0m1qLmxoNuqLgP8+q11cN4gvmKPayRd3USCJc=",
-        "owner": "omgbebebe",
-        "repo": "neontology.py-nix",
-        "rev": "82e2ca37e7a3ac938349a58fa704628f06e7897d",
+        "lastModified": 1723373720,
+        "narHash": "sha256-DfYC1XUH7Xh1pbsufgCDnXTo2Xp+pHv3P6x8e8NJxIc=",
+        "owner": "mindwm",
+        "repo": "neontology",
+        "rev": "396b43ee750693c70b6d7b5a4bf8301aeb43291c",
         "type": "github"
       },
       "original": {
-        "owner": "omgbebebe",
-        "repo": "neontology.py-nix",
+        "owner": "mindwm",
+        "repo": "neontology",
         "type": "github"
       }
     },
