@@ -121,7 +121,7 @@ class ManagerService(ServiceInterface):
             specversion = "1.0",
             type = t,
             source = f"{subject}",
-            subject = f"{subject}",
+            subject = iodoc.input,
             datacontenttype = "application/json",
             data = ev,
             )
