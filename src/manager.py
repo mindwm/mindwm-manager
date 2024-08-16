@@ -126,6 +126,7 @@ class ManagerService(ServiceInterface):
             data = ev,
             )
 
+        logger.info(f"publush: {payload}")
         await self.nats.publish(subject, payload)
 
     async def graph_event_callback(self, event):

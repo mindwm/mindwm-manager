@@ -5,6 +5,7 @@ import os
 import pyte
 import json
 import time
+from uuid import uuid4
 from mindwm.model.objects import IoDocument
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ class PipeListener:
 
                     if input_final != "" and output != "":
                         payload = IoDocument(
+                            uuid=str(uuid4()),
                             ps1=last_line,
                             input=input_final,
                             output=output.strip()
