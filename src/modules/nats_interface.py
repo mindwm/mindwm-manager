@@ -1,16 +1,18 @@
+import asyncio
+import json
 import logging
 from datetime import datetime
-
-import asyncio
 from functools import partial
-import nats
-import json
 from time import sleep
+
+import nats
 from mindwm import logging
 
 logger = logging.getLogger(__name__)
 
+
 class NatsInterface:
+
     def __init__(self, url):
         self.nc = None
         self.url = url
@@ -43,7 +45,10 @@ class NatsInterface:
     async def publish(self, subj, payload):
         headers = {}
         logger.debug(f"send message to {subj}: {payload}")
-        await self.nc.publish(subj, bytes(payload.model_dump_json(), encoding='utf-8'), headers=headers)
+        await self.nc.publish(subj,
+                              bytes(payload.model_dump_json(),
+                                    encoding='utf-8'),
+                              headers=headers)
 
     async def message_handler(self, subj, callback, msg):
         data = json.loads(msg.data.decode())
@@ -54,6 +59,7 @@ class NatsInterface:
 
         if callback:
             await callback(message)
+
 
 async def app():
     loop = asyncio.get_event_loop()
@@ -69,11 +75,11 @@ async def app():
     await n.listen(nats_iodoc_topic, nats_message_callback)
     await n.listen(nats_iodoc_topic2, nats_message_callback)
 
-
     while True:
         await asyncio.sleep(1)
 
     logger.info("Done")
+
 
 if __name__ == "__main__":
     asyncio.run(app())
