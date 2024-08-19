@@ -7,6 +7,7 @@ from enum import IntFlag
 from signal import SIGINT, SIGTERM
 from uuid import UUID, uuid4
 
+import mindwm.events as events
 from dbus_next.aio.message_bus import Message, MessageBus
 from dbus_next.constants import BusType
 from dbus_next.service import ServiceInterface, method
@@ -15,11 +16,11 @@ from mindwm import logging
 from mindwm.model.events import CloudEvent, IoDocumentEvent, TouchEvent
 from mindwm.model.objects import Touch
 
-from modules.nats_interface import NatsInterface
 from modules.surrealdb_interface import SurrealDbInterface
 from modules.tmux_session import TmuxSessionService
 
-logging.basicConfig(level=os.environ.get('LOG_LEVEL', 'INFO'))
+FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+logging.basicConfig(level=os.environ.get('LOG_LEVEL', 'INFO'), format=FORMAT)
 logger = logging.getLogger(__name__)
 logger.debug("TEST DEBUG LEVEL")
 
@@ -36,15 +37,12 @@ class ManagerService(ServiceInterface):
     def __init__(self, dbus_service, bus):
         super().__init__(dbus_service['destination'])
         self.params = {
-            "nats": {
-                "url":
-                config("MINDWM_NATS_URL",
-                       default="nats://user:pass@127.0.0.1/"),
+            "events": {
                 "subject_prefix":
-                config("MINDWM_NATS_SUBJECT_PREFIX",
+                config("MINDWM_EVENT_SUBJECT_PREFIX",
                        default=f"org.mindwm.demouser.demohost"),
                 "feedback_subject":
-                config("MINDWM_NATS_FEEDBACK_SUBJECT",
+                config("MINDWM_FEEDBACK_SUBJECT",
                        default=
                        f"user-demouser.demohost-broker-kne-trigger._knative"),
                 "listen": {},
@@ -59,38 +57,41 @@ class ManagerService(ServiceInterface):
             "prompt_terminators":
             config("MINDWM_PROMPT_TERMINATORS", default="$,❯,➜").split(',')
         }
-        self.params['nats']['listen'] = {
-            "feedback": {
-                "subject": f"{self.params['nats']['feedback_subject']}",
-                # TODO: rename callback to `feedback`
+        self.params['events']['listen'] = {
+            "graph": {
+                "subject": f"{self.params['events']['feedback_subject']}",
                 "callback": self.graph_event_callback,
+            },
+            "feedback": {
+                "subject":
+                f"{self.params['events']['feedback_subject']}.feedback",
+                # TODO: rename callback to `feedback`
+                "callback": self.feedback_callback,
             },
             # FIX: looks like we can't have two callbacks on the same subject
             #"actions": {
-            #    "subject": f"{self.params['nats']['feedback_subject']}",
+            #    "subject": f"{self.params['events']['feedback_subject']}",
             #    "callback": self.action_callback,
             #},
         }
 
+        self.subscribers = {}
         self._loop = asyncio.get_event_loop()
         self.dbus_service = dbus_service
         self._bus = bus
         self._bus.export(f"{self.dbus_service['path']}service", self)
-        self.nats = NatsInterface(self.params['nats']['url'])
         if self.params['surrealdb']['enabled']:
             self.graphdb = SurrealDbInterface(self.params['surrealdb']['url'])
 
-        self.subscribers = {}
-
     async def _init(self):
         self.sessions = {}
-        await self.nats._init()
         if self.params['surrealdb']['enabled']:
             await self.graphdb._init()
             self._loop.create_task(self.graphdb.loop())
 
-        for k, v in self.params['nats']['listen'].items():
-            await self.nats.subscribe(v['subject'], v['callback'])
+        await events.init()
+        for k, v in self.params['events']['listen'].items():
+            await events.subscribe(v['subject'], v['callback'])
 
     async def loop(self):
         await self._bus.wait_for_disconnect()
@@ -141,18 +142,10 @@ class ManagerService(ServiceInterface):
         )
 
         logger.info(f"publush: {payload}")
-        await self.nats.publish(subject, payload)
+        await events.publish(subject, payload)
 
-    async def action_callback(self, action):
-        logger.debug(f"action received: {action}")
-        #try:
-
-        #action_type = action.data.type
-        #logger.debug(f"action type: {action_type}")
-
-    async def graph_event_callback(self, event):
-        logger.debug(f"initial event: {event}")
-        logger.debug(f"type: {type(event)}")
+    async def feedback_callback(self, action):
+        logger.debug(f"feedback received: {action}")
         if event['type'] == "showmessage":
             try:
                 event['data'] = json.loads(event['data'])
@@ -173,6 +166,14 @@ class ManagerService(ServiceInterface):
             await self.sessions[first_sess]['service'].send_cmd(cmd)
             return
 
+        #try:
+
+        #action_type = action.data.type
+        #logger.debug(f"action type: {action_type}")
+
+    async def graph_event_callback(self, event):
+        logger.debug(f"initial event: {event}")
+        logger.debug(f"type: {type(event)}")
         if not self.params['surrealdb']['enabled']:
             return
 
@@ -274,9 +275,8 @@ class ManagerService(ServiceInterface):
                                  data=Touch(ids=touch_nodes))
 
             logger.debug(f"NATS->{payload}")
-            subject = f"{self.params['nats']['subject_prefix']}.touch"
-            await self.nats.publish(subject, payload)
-            #await asyncio.sleep(10)
+            subject = f"{self.params['events']['subject_prefix']}.touch"
+            await events.publish(subject, payload)
 
     @method()
     async def tmux_join(self, tmux_string: 's') -> 'b':
@@ -289,7 +289,7 @@ class ManagerService(ServiceInterface):
             "pane_id": pane_id,
         }
         b64socket = b64encode(socket_path.encode('utf-8')).decode('utf-8')
-        session_string = f"{self.params['nats']['subject_prefix']}.tmux.{b64socket}.{session_id}.{pane_id}"
+        session_string = f"{self.params['events']['subject_prefix']}.tmux.{b64socket}.{session_id}.{pane_id}"
         hex_string = hashlib.md5(session_string.encode('utf-8')).hexdigest()
         session_uuid = str(UUID(hex=hex_string))
         tmux_session_service = TmuxSessionService(
@@ -302,9 +302,9 @@ class ManagerService(ServiceInterface):
             "service":
             tmux_session_service,
             "subject_iodoc":
-            f"{self.params['nats']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.iodocument",
+            f"{self.params['events']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.iodocument",
             "subject_feedback":
-            f"{self.params['nats']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.feedback",
+            f"{self.params['events']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.feedback",
         }
         self.tmux_control = self._loop.create_task(tmux_session_service.loop())
         logger.debug(str(self.sessions))

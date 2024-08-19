@@ -6,8 +6,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     surrealdb-py.url = "github:omgbebebe/surrealdb.py-nix";
     surrealdb-py.inputs.nixpkgs.follows = "nixpkgs";
-    mindwm-sdk-python.url = "path:/home/pion/work/dev/mindwm/mindwm-sdk-python-ng";
-    #mindwm-sdk-python.url = "github:mindwm/mindwm-sdk-python-ng";
+    mindwm-sdk-python.url = "github:mindwm/mindwm-sdk-python-ng";
     mindwm-sdk-python.inputs.nixpkgs.follows = "nixpkgs";
   };
 
@@ -52,7 +51,7 @@
               importmagic epc
           ]);
           shellHook = ''
-            export PYTHONPATH="$PYTHONPATH:./src"
+            export PYTHONPATH="./src:3rdparty/mindwm-sdk-python-ng/src:$PYTHONPATH"
           '';
         };
       };

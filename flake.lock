@@ -104,11 +104,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1723391498,
-        "narHash": "sha256-76RSPH7uVSxIrU08Iex09xrIED2HmG7VjMbqB06YOxA=",
+        "lastModified": 1724020382,
+        "narHash": "sha256-WhZJYvtrri5Y+7glEwt6Jyofz1hAdoT5Oh9mbpKIFWw=",
         "owner": "mindwm",
         "repo": "mindwm-sdk-python-ng",
-        "rev": "1af13ecf02f566dadf6659e93b27129e339c886e",
+        "rev": "48583e4331067c99631544e6e93269e0fb4ddac4",
         "type": "github"
       },
       "original": {
@@ -126,11 +126,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1723373720,
-        "narHash": "sha256-DfYC1XUH7Xh1pbsufgCDnXTo2Xp+pHv3P6x8e8NJxIc=",
+        "lastModified": 1723656685,
+        "narHash": "sha256-5hfvJJc9uQG7WSAn1O/rPjThEi9uBBfhbWJtlg0R+Os=",
         "owner": "mindwm",
         "repo": "neontology",
-        "rev": "396b43ee750693c70b6d7b5a4bf8301aeb43291c",
+        "rev": "0259ea14c2e8f8095ec76aaf09843068d8b80663",
         "type": "github"
       },
       "original": {
