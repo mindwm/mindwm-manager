@@ -6,7 +6,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     surrealdb-py.url = "github:omgbebebe/surrealdb.py-nix";
     surrealdb-py.inputs.nixpkgs.follows = "nixpkgs";
-    mindwm-sdk-python.url = "github:mindwm/mindwm-sdk-python-ng";
+    mindwm-sdk-python.url = "github:mindwm/mindwm-sdk-python-ng/?ref=feat/new_events_model";
     mindwm-sdk-python.inputs.nixpkgs.follows = "nixpkgs";
   };
 

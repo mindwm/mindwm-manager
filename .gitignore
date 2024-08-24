@@ -6,3 +6,4 @@ __pycache__/
 .direnv/
 .state/
 3rdparty/
+playground/

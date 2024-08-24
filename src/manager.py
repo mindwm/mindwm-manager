@@ -13,8 +13,9 @@ from dbus_next.constants import BusType
 from dbus_next.service import ServiceInterface, method
 from decouple import config
 from mindwm import logging
-from mindwm.model.events import CloudEvent, IoDocumentEvent, TouchEvent
-from mindwm.model.objects import Touch
+from mindwm.knfunc.decorators import with_trace
+from mindwm.model.events import MindwmEvent
+from mindwm.model.objects import IoDocument, Touch, Ping, Pong
 
 from modules.surrealdb_interface import SurrealDbInterface
 from modules.tmux_session import TmuxSessionService
@@ -126,24 +127,22 @@ class ManagerService(ServiceInterface):
         return True
         #assert reply.message_type == MessageType.METHOD_RETURN
 
+    @with_trace()
     async def iodoc_callback(self, uuid, iodoc):
-        t = "iodocument"
         subject = self.sessions[uuid]['subject_iodoc']
-        ev = IoDocumentEvent(data=iodoc)
-        payload = CloudEvent(
-            id=str(uuid4()),
-            knativebrokerttl="255",
-            specversion="1.0",
-            type=t,
+        #payload = PingEvent(source=subject, data=Ping())
+        payload = MindwmEvent(
             source=f"{subject}",
             subject=iodoc.input,
             datacontenttype="application/json",
-            data=ev,
+            data=iodoc,
+            type=iodoc.type,
         )
 
         logger.info(f"publush: {payload}")
         await events.publish(subject, payload)
 
+    @with_trace()
     async def feedback_callback(self, action):
         logger.debug(f"feedback received: {action}")
         if event['type'] == "showmessage":
@@ -171,6 +170,7 @@ class ManagerService(ServiceInterface):
         #action_type = action.data.type
         #logger.debug(f"action type: {action_type}")
 
+    @with_trace()
     async def graph_event_callback(self, event):
         logger.debug(f"initial event: {event}")
         logger.debug(f"type: {type(event)}")
@@ -269,7 +269,7 @@ class ManagerService(ServiceInterface):
                                  knativebrokerttl="255",
                                  specversion="1.0",
                                  type="touch",
-                                 source="mindwm.pion.snpnb.manager",
+                                 source="org.mindwm.pion.snpnb.manager",
                                  subject="node",
                                  datacontenttype="application/json",
                                  data=Touch(ids=touch_nodes))
@@ -302,9 +302,8 @@ class ManagerService(ServiceInterface):
             "service":
             tmux_session_service,
             "subject_iodoc":
-            f"{self.params['events']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.iodocument",
-            "subject_feedback":
-            f"{self.params['events']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}.feedback",
+            f"{self.params['events']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}",
+            "subject_feedback": self.params['events']['feedback_subject'],
         }
         self.tmux_control = self._loop.create_task(tmux_session_service.loop())
         logger.debug(str(self.sessions))
