@@ -1,0 +1,18 @@
+name: "Build and push OCI image"
+on:
+  push:
+    branches:
+    - main
+    - master
+    tags:
+    - v1.*
+    - v2.*
+  pull_request:
+    branches:
+    - main
+    - master
+jobs:
+  build_and_push:
+    uses: mindwm/github-workflows/.github/workflows/build_oci_image.yml@v1.0.2
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
