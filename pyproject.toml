@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mindwm-manager = "mindwm.manager:main"
+mindwm-manager = "manager:main"
 
 [project.urls]
 Homepage = "https://github.com/mindwm/mindwm-manager"
