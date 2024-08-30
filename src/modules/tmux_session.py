@@ -1,16 +1,20 @@
-from mindwm import logging
 import asyncio
-from .subprocess import Subprocess
-from dbus_next.service import ServiceInterface, method, signal, dbus_property
-from dbus_next.aio.message_bus import Message, MessageType, MessageBus
-from dbus_next.constants import BusType
-from .pipe_listener import PipeListener
 
+from dbus_next.aio.message_bus import Message, MessageBus, MessageType
+from dbus_next.constants import BusType
+from dbus_next.service import ServiceInterface, dbus_property, method, signal
+from mindwm import logging
+
+from .pipe_listener import PipeListener
+from .subprocess import Subprocess
 
 logger = logging.getLogger(__name__)
 
+
 class TmuxSessionService(ServiceInterface):
-    def __init__(self, uuid, dbus_service, tmux_session, prompt_terminators, bus, iodoc_callback):
+
+    def __init__(self, uuid, dbus_service, tmux_session, prompt_terminators,
+                 bus, iodoc_callback):
         super().__init__(dbus_service['destination'])
         self._loop = asyncio.get_event_loop()
         self.dbus_service = dbus_service
@@ -19,26 +23,23 @@ class TmuxSessionService(ServiceInterface):
         self._iodoc_callback = iodoc_callback
         self._bus = bus
         self.uuid = uuid
-        self._bus.export(f"{self.dbus_service['path']}tmux_session/{uuid.replace('-','_')}", self)
+        self._bus.export(
+            f"{self.dbus_service['path']}tmux_session/{uuid.replace('-','_')}",
+            self)
 
     async def _init(self):
         logger.debug(f"spawning tmux conttrol for {self.tmux_session}")
         self.subprocess = Subprocess(
             f"tmux -S{self.tmux_session['socket']} -C a -t%{self.tmux_session['pane_id']}",
-            "^(?!%output.*)",
-            self.output_callback,
-            self.uuid,
-            self.terminated_callback
-            )
+            "^(?!%output.*)", self.output_callback, self.uuid,
+            self.terminated_callback)
         self._subproc_running = False
         self.tmux_control = self._loop.create_task(self.subprocess.start())
         logger.info(f"creating new PipeListener for {self.tmux_session}")
         self.pipe_path = f"/tmp/tmux-1000/mindwm-asciinema-{self.uuid}.socket"
-        self.pipe_listener = PipeListener(
-            self.pipe_path,
-            self.prompt_terminators,
-            self.pipe_callback
-        )
+        self.pipe_listener = PipeListener(self.pipe_path,
+                                          self.prompt_terminators,
+                                          self.pipe_callback)
         await self.pipe_listener._init()
         self._loop.create_task(self.pipe_listener.loop())
         logger.debug(f"starting asciinema via tmux control for {self.uuid}")
@@ -49,7 +50,9 @@ class TmuxSessionService(ServiceInterface):
             await asyncio.sleep(0.1)
 
         await self.subprocess.send_stdio(tmux_cmd)
-        logger.debug("need to watch for asciinema exit and shotdown the PipeListener and self")
+        logger.debug(
+            "need to watch for asciinema exit and shotdown the PipeListener and self"
+        )
         return self.uuid
 
     async def output_callback(self, uid, output, is_terminated):
@@ -65,3 +68,7 @@ class TmuxSessionService(ServiceInterface):
     async def loop(self):
         logger.debug(f"{self.tmux_control}")
         await self._bus.wait_for_disconnect()
+
+    async def send_cmd(self, cmd):
+        logger.debug(f"send command to tmux session: {cmd}")
+        await self.subprocess.send_stdio(cmd)

@@ -1,10 +1,13 @@
-from mindwm import logging
 import asyncio
+
+from mindwm import logging
 from surrealdb import AsyncSurrealDB
 
 logger = logging.getLogger(__name__)
 
+
 class SurrealDbInterface:
+
     def __init__(self, url):
         self._url = url
         self._db = AsyncSurrealDB(self._url)
@@ -27,8 +30,7 @@ class SurrealDbInterface:
     async def update_edge(self, edge_type, node_a, node_b):
         await self._db.query(f"""
           relate {node_a['type']}:{node_a['id']}->{edge_type}->{node_b['type']}:{node_b['id']}
-        """
-        )
+        """)
 
     async def get_node_by_id(self, node_type, node_id):
         q = f"""
