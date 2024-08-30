@@ -31,7 +31,7 @@
         project = pkgs.callPackage ./package.nix {
           python = my_python;
         };
-        dockerImage = pkgs.dockerTools.buildImage {
+        dockerImage = pkgs.dockerTools.buildLayeredImage {
           name = "mindwm-manager";
           config = {
             cmd = [ "${project}/bin/mindwm-manager" ];
