@@ -13,9 +13,8 @@ from dbus_next.constants import BusType
 from dbus_next.service import ServiceInterface, method
 from decouple import config
 from mindwm import logging
-from mindwm.knfunc.decorators import with_trace
 from mindwm.model.events import MindwmEvent
-from mindwm.model.objects import IoDocument, Touch, Ping, Pong
+from mindwm.model.objects import IoDocument, Ping, Pong, Touch
 
 from modules.surrealdb_interface import SurrealDbInterface
 from modules.tmux_session import TmuxSessionService
@@ -127,7 +126,6 @@ class ManagerService(ServiceInterface):
         return True
         #assert reply.message_type == MessageType.METHOD_RETURN
 
-    @with_trace()
     async def iodoc_callback(self, uuid, iodoc):
         subject = self.sessions[uuid]['subject_iodoc']
         #payload = PingEvent(source=subject, data=Ping())
@@ -142,7 +140,6 @@ class ManagerService(ServiceInterface):
         logger.info(f"publush: {payload}")
         await events.publish(subject, payload)
 
-    @with_trace()
     async def feedback_callback(self, action):
         logger.debug(f"feedback received: {action}")
         if event['type'] == "showmessage":
@@ -170,7 +167,6 @@ class ManagerService(ServiceInterface):
         #action_type = action.data.type
         #logger.debug(f"action type: {action_type}")
 
-    @with_trace()
     async def graph_event_callback(self, event):
         logger.debug(f"initial event: {event}")
         logger.debug(f"type: {type(event)}")
@@ -299,8 +295,7 @@ class ManagerService(ServiceInterface):
         await tmux_session_service._init()
 
         self.sessions[session_uuid] = {
-            "service":
-            tmux_session_service,
+            "service": tmux_session_service,
             "subject_iodoc":
             f"{self.params['events']['subject_prefix']}.tmux.{b64socket}.{session_uuid}.{session_id}.{pane_id}",
             "subject_feedback": self.params['events']['feedback_subject'],
