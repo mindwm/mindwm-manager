@@ -45,6 +45,7 @@
           buildInputs = with pkgs; [
             natscli
             tmuxp
+            clipnotify
           ] ++ (with pkgs.python3.pkgs; [
               pylint yapf isort autoflake
               python-lsp-server
