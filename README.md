@@ -3,7 +3,7 @@
 
 start local surrealdb in dedicated container
 ```sh
-docker run --rm --pull always --name surrealdb -p 8000:8000 surrealdb/surrealdb:latest start
+docker run --rm --pull always --name surrealdb -p 8000:8000 surrealdb/surrealdb:v1.5.5 start
 ```
 
 source environment and start mindwm-manager
