@@ -27,11 +27,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1722555600,
-        "narHash": "sha256-XOQkdLafnb/p9ij77byFQjDf5m5QYl9b2REiVClC+x4=",
+        "lastModified": 1727826117,
+        "narHash": "sha256-K5ZLCyfO/Zj9mPFldf3iwS6oZStJcU4tSpiXTMYaaL0=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "8471fe90ad337a8074e957b69ca4d0089218391d",
+        "rev": "3d04084d54bedc3d6b8b736c70ef449225c361b1",
         "type": "github"
       },
       "original": {
@@ -81,6 +81,24 @@
         "nixpkgs-lib": "nixpkgs-lib_4"
       },
       "locked": {
+        "lastModified": 1722555600,
+        "narHash": "sha256-XOQkdLafnb/p9ij77byFQjDf5m5QYl9b2REiVClC+x4=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "8471fe90ad337a8074e957b69ca4d0089218391d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_5": {
+      "inputs": {
+        "nixpkgs-lib": "nixpkgs-lib_5"
+      },
+      "locked": {
         "lastModified": 1719745305,
         "narHash": "sha256-xwgjVUpqSviudEkpQnioeez1Uo2wzrsMaJKJClh+Bls=",
         "owner": "hercules-ci",
@@ -101,14 +119,15 @@
         "neontology-py": "neontology-py",
         "nixpkgs": [
           "nixpkgs"
-        ]
+        ],
+        "strictjson-py": "strictjson-py"
       },
       "locked": {
-        "lastModified": 1724338426,
-        "narHash": "sha256-cmJxBlypy1S4VgQymGr5SRtfwByteWzsqummHTyGt9k=",
+        "lastModified": 1725007128,
+        "narHash": "sha256-qkDeS4oJx0DuYd2lYumPbIMKx8IkVTnyy9AjN812znc=",
         "owner": "mindwm",
         "repo": "mindwm-sdk-python-ng",
-        "rev": "cc1c3555c9518f2be16b31c659c949f6b07476e9",
+        "rev": "7ae07a3d85d3c1baf4c7228f6accced6671aa729",
         "type": "github"
       },
       "original": {
@@ -158,14 +177,14 @@
     },
     "nixpkgs-lib": {
       "locked": {
-        "lastModified": 1722555339,
-        "narHash": "sha256-uFf2QeW7eAHlYXuDktm9c25OxOyCoUOQmh5SZ9amE5Q=",
+        "lastModified": 1727825735,
+        "narHash": "sha256-0xHYkMkeLVQAMa7gvkddbPqpxph+hDzdu1XdGPJR+Os=",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/a5d394176e64ab29c852d03346c1fc9b0b7d33eb.tar.gz"
+        "url": "https://github.com/NixOS/nixpkgs/archive/fb192fec7cc7a4c26d51779e9bab07ce6fa5597a.tar.gz"
       },
       "original": {
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/a5d394176e64ab29c852d03346c1fc9b0b7d33eb.tar.gz"
+        "url": "https://github.com/NixOS/nixpkgs/archive/fb192fec7cc7a4c26d51779e9bab07ce6fa5597a.tar.gz"
       }
     },
     "nixpkgs-lib_2": {
@@ -194,6 +213,18 @@
     },
     "nixpkgs-lib_4": {
       "locked": {
+        "lastModified": 1722555339,
+        "narHash": "sha256-uFf2QeW7eAHlYXuDktm9c25OxOyCoUOQmh5SZ9amE5Q=",
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/a5d394176e64ab29c852d03346c1fc9b0b7d33eb.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://github.com/NixOS/nixpkgs/archive/a5d394176e64ab29c852d03346c1fc9b0b7d33eb.tar.gz"
+      }
+    },
+    "nixpkgs-lib_5": {
+      "locked": {
         "lastModified": 1717284937,
         "narHash": "sha256-lIbdfCsf8LMFloheeE6N31+BMIeixqyQWbSr2vk79EQ=",
         "type": "tarball",
@@ -212,9 +243,31 @@
         "surrealdb-py": "surrealdb-py"
       }
     },
-    "surrealdb-py": {
+    "strictjson-py": {
       "inputs": {
         "flake-parts": "flake-parts_4",
+        "nixpkgs": [
+          "mindwm-sdk-python",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1724405458,
+        "narHash": "sha256-Y+X+MLKd9tt3C6tynTyT2ny3/uyJhVIeGUQTq4aJyFY=",
+        "owner": "mindwm",
+        "repo": "strictjson.py-nix",
+        "rev": "6c3281c7f7ba3dfdc597d523885f54cf22a98177",
+        "type": "github"
+      },
+      "original": {
+        "owner": "mindwm",
+        "repo": "strictjson.py-nix",
+        "type": "github"
+      }
+    },
+    "surrealdb-py": {
+      "inputs": {
+        "flake-parts": "flake-parts_5",
         "nixpkgs": [
           "nixpkgs"
         ]
