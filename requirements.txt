@@ -1,4 +1,4 @@
-git+https://github.com/mindwm/mindwm-sdk-python-ng.git@feat/new_events_model#egg=mindwm-sdk-python-ng
+git+https://github.com/mindwm/mindwm-sdk-python-ng.git@feat/new_events_model
 nats-py
 python-decouple
 aiofiles
