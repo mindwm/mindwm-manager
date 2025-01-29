@@ -66,7 +66,13 @@ class PipeListener:
                 except Exception as e:
                     logger.error(f"cannot parse {l} as json")
 
-                lines_raw = chunk_raw.split('\r\n')
+                try:
+                    lines_raw = chunk_raw.split('\r\n')
+                except Exception as e:
+                    logger.error("chunk_raw fails")
+                    pass
+                    continue
+
                 try:
                     lines = list(map(self.sanitize, lines_raw))
                 except TypeError as e:
