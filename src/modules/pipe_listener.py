@@ -69,7 +69,7 @@ class PipeListener:
                 try:
                     lines_raw = chunk_raw.split('\r\n')
                 except Exception as e:
-                    logger.error("chunk_raw fails")
+                    logger.error("chunk_raw fails {e}")
                     pass
                     continue
 
