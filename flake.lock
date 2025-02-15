@@ -123,16 +123,16 @@
         "strictjson-py": "strictjson-py"
       },
       "locked": {
-        "lastModified": 1725007128,
-        "narHash": "sha256-qkDeS4oJx0DuYd2lYumPbIMKx8IkVTnyy9AjN812znc=",
+        "lastModified": 1739632574,
+        "narHash": "sha256-InGMStF6p0ZZn42bFObKO8L+OWSG8rlKIK/2Rc56pYQ=",
         "owner": "mindwm",
         "repo": "mindwm-sdk-python-ng",
-        "rev": "7ae07a3d85d3c1baf4c7228f6accced6671aa729",
+        "rev": "ab08d5f4378d7f11de5848c73aba0d31f9b36d10",
         "type": "github"
       },
       "original": {
         "owner": "mindwm",
-        "ref": "feat/new_events_model",
+        "ref": "feat/upstream_eventing_nats",
         "repo": "mindwm-sdk-python-ng",
         "type": "github"
       }
