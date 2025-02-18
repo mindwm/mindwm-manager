@@ -54,6 +54,13 @@ class ManagerService(ServiceInterface):
                 "enabled":
                 config("MINDWM_SURREALDB_ENABLED", default=False, cast=bool),
             },
+            "freeplane": {
+                "endpoint":
+                config("MINDWM_FREEPLANE_GRPC_ENDPOINT",
+                       default="127.0.0.1:50001"),
+                "enabled":
+                config("MINDWM_FREEPLANE_ENABLED", default=False, cast=bool),
+            },
             "prompt_terminators":
             config("MINDWM_PROMPT_TERMINATORS", default="$,❯,➜").split(',')
         }
