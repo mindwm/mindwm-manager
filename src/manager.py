@@ -69,6 +69,10 @@ class ManagerService(ServiceInterface):
                 "subject": f"{self.params['events']['feedback_subject']}",
                 "callback": self.graph_event_callback,
             },
+            "freeplane": {
+                "subject": f"{self.params['events']['feedback_subject']}",
+                "callback": self.freeplane_graph_event_callback,
+            },
             "feedback": {
                 "subject":
                 f"{self.params['events']['feedback_subject']}.feedback",
@@ -174,7 +178,15 @@ class ManagerService(ServiceInterface):
         #action_type = action.data.type
         #logger.debug(f"action type: {action_type}")
 
+    async def freeplane_graph_event_callback(self, event):
+        logger.debug(f"initial event: {event}")
+        logger.debug(f"type: {type(event)}")
+
+        if not self.params['freeplane']['enabled']:
+            return
+
     async def graph_event_callback(self, event):
+        print("XXXX222222222222----------------------------------")
         logger.debug(f"initial event: {event}")
         logger.debug(f"type: {type(event)}")
         if not self.params['surrealdb']['enabled']:
