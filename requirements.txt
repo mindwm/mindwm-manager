@@ -17,5 +17,5 @@ opentelemetry-instrumentation
 opentelemetry-exporter-otlp-proto-grpc
 fastapi
 neontology
+grpcio
 surrealdb==0.4.1
-

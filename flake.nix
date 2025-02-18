@@ -19,6 +19,7 @@
         my_python = pkgs.python3.withPackages (ps: with ps; [
           inputs.surrealdb-py.packages.${system}.default
           inputs.mindwm-sdk-python.packages.${system}.default
+          grpcio-tools
           nats-py
           python-decouple
           aiofiles
