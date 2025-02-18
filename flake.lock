@@ -27,11 +27,11 @@
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
-        "lastModified": 1727826117,
-        "narHash": "sha256-K5ZLCyfO/Zj9mPFldf3iwS6oZStJcU4tSpiXTMYaaL0=",
+        "lastModified": 1738453229,
+        "narHash": "sha256-7H9XgNiGLKN1G1CgRh0vUL4AheZSYzPm+zmZ7vxbJdo=",
         "owner": "hercules-ci",
         "repo": "flake-parts",
-        "rev": "3d04084d54bedc3d6b8b736c70ef449225c361b1",
+        "rev": "32ea77a06711b758da0ad9bd6a844c5740a87abd",
         "type": "github"
       },
       "original": {
@@ -123,16 +123,15 @@
         "strictjson-py": "strictjson-py"
       },
       "locked": {
-        "lastModified": 1739632574,
-        "narHash": "sha256-InGMStF6p0ZZn42bFObKO8L+OWSG8rlKIK/2Rc56pYQ=",
+        "lastModified": 1739907173,
+        "narHash": "sha256-Fjt59M7kdsnDUusmZWX/5dT3oIwjDonJU7lvudexbvI=",
         "owner": "mindwm",
         "repo": "mindwm-sdk-python-ng",
-        "rev": "ab08d5f4378d7f11de5848c73aba0d31f9b36d10",
+        "rev": "a57758b5159d9d8dec79f948bf08626c33259a79",
         "type": "github"
       },
       "original": {
         "owner": "mindwm",
-        "ref": "feat/upstream_eventing_nats",
         "repo": "mindwm-sdk-python-ng",
         "type": "github"
       }
@@ -177,14 +176,14 @@
     },
     "nixpkgs-lib": {
       "locked": {
-        "lastModified": 1727825735,
-        "narHash": "sha256-0xHYkMkeLVQAMa7gvkddbPqpxph+hDzdu1XdGPJR+Os=",
+        "lastModified": 1738452942,
+        "narHash": "sha256-vJzFZGaCpnmo7I6i416HaBLpC+hvcURh/BQwROcGIp8=",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/fb192fec7cc7a4c26d51779e9bab07ce6fa5597a.tar.gz"
+        "url": "https://github.com/NixOS/nixpkgs/archive/072a6db25e947df2f31aab9eccd0ab75d5b2da11.tar.gz"
       },
       "original": {
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/fb192fec7cc7a4c26d51779e9bab07ce6fa5597a.tar.gz"
+        "url": "https://github.com/NixOS/nixpkgs/archive/072a6db25e947df2f31aab9eccd0ab75d5b2da11.tar.gz"
       }
     },
     "nixpkgs-lib_2": {
