@@ -44,7 +44,6 @@ class NatsInterface:
 
     async def publish(self, subj, payload):
         headers = {}
-        logger.debug(f"send message to {subj}: {payload}")
         await self.nc.publish(subj,
                               bytes(payload.model_dump_json(),
                                     encoding='utf-8'),

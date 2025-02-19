@@ -7,6 +7,10 @@ from enum import IntFlag
 from signal import SIGINT, SIGTERM
 from uuid import UUID, uuid4
 
+import grpc
+from freeplane_lib import freeplane_pb2
+#from freeplane_lib import freeplane_pb2_grpc
+
 import mindwm.events as events
 from dbus_next.aio.message_bus import Message, MessageBus
 from dbus_next.constants import BusType
@@ -22,7 +26,6 @@ from modules.tmux_session import TmuxSessionService
 FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 logging.basicConfig(level=os.environ.get('LOG_LEVEL', 'INFO'), format=FORMAT)
 logger = logging.getLogger(__name__)
-logger.debug("TEST DEBUG LEVEL")
 
 
 class Event(IntFlag):
@@ -65,10 +68,10 @@ class ManagerService(ServiceInterface):
             config("MINDWM_PROMPT_TERMINATORS", default="$,❯,➜").split(',')
         }
         self.params['events']['listen'] = {
-            "graph": {
-                "subject": f"{self.params['events']['feedback_subject']}",
-                "callback": self.graph_event_callback,
-            },
+            # "graph": {
+            #     "subject": f"{self.params['events']['feedback_subject']}",
+            #     "callback": self.graph_event_callback,
+            # },
             "freeplane": {
                 "subject": f"{self.params['events']['feedback_subject']}",
                 "callback": self.freeplane_graph_event_callback,
@@ -182,11 +185,47 @@ class ManagerService(ServiceInterface):
         logger.debug(f"initial event: {event}")
         logger.debug(f"type: {type(event)}")
 
-        if not self.params['freeplane']['enabled']:
-            return
+        # if not self.params['freeplane']['enabled']:
+        #     return
+
+        channel = grpc.insecure_channel('localhost:50051') 
+        fp = freeplane_pb2_grpc.FreeplaneStub(channel)
+        
+        event_type = event['type']
+        event_subject = event['subject']
+
+        if (event_type == "org.mindwm.v1.graph.created"):
+            if (event_subject == "org.mindwm.context.pink.graph.node"):
+                graph_node_id = str(event['data']['id'])
+                obj = event['data']['obj']
+                obj_type = obj['type']
+                node = None
+
+                if (obj_type == 'org.mindwm.v1.graph.node.user'):
+                    node_name = obj['username']
+                    node = fp.CreateChild(freeplane_pb2.CreateChildRequest(name=node_name, parent_node_id = "")) 
+                    fp.NodeBackgroundColorSet(freeplane_pb2.NodeBackgroundColorSetRequest(node_id=node.node_id, red=255, green=120, blue=120, alpha=255)) 
+
+                if (obj_type == 'org.mindwm.v1.graph.node.host'):
+                    node_name = obj['hostname']
+                    node = fp.CreateChild(freeplane_pb2.CreateChildRequest(name=node_name, parent_node_id = "")) 
+                    fp.NodeBackgroundColorSet(freeplane_pb2.NodeBackgroundColorSetRequest(node_id=node.node_id, red=120, green=120, blue=120, alpha=255)) 
+                    
+                if (obj_type == 'org.mindwm.v1.graph.node.iodocument'):
+                    node_name = obj['input']
+                    node_details = obj['output']
+                    node = fp.CreateChild(freeplane_pb2.CreateChildRequest(name=node_name, parent_node_id = "")) 
+                    fp.NodeDetailsSet(freeplane_pb2.NodeDetailsSetRequest(node_id=node.node_id, details=node_details))
+                    fp.NodeBackgroundColorSet(freeplane_pb2.NodeBackgroundColorSetRequest(node_id=node.node_id, red=250, green=120, blue=80, alpha=255)) 
+                
+                if node:
+                    fp.NodeAttributeAdd(freeplane_pb2.NodeAttributeAddRequest(node_id=node.node_id, attribute_name="graph_node_id", attribute_value=graph_node_id)) 
+                    fp.NodeAttributeAdd(freeplane_pb2.NodeAttributeAddRequest(node_id=node.node_id, attribute_name="type", attribute_value=obj_type)) 
+
+        #fp.close()
+
 
     async def graph_event_callback(self, event):
-        print("XXXX222222222222----------------------------------")
         logger.debug(f"initial event: {event}")
         logger.debug(f"type: {type(event)}")
         if not self.params['surrealdb']['enabled']:
